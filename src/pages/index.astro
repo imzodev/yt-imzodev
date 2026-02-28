@@ -1,11 +1,101 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="YouTube Channel Lookup">
+  <div class="min-h-screen bg-base-200">
+    <!-- Hero Section -->
+    <div class="hero min-h-screen bg-base-200">
+      <div class="hero-content text-center">
+        <div class="max-w-2xl">
+          <h1 class="text-5xl font-bold">YouTube Channel Lookup</h1>
+          <p class="py-6">
+            Search and analyze YouTube channels. Get insights, statistics, and detailed information about any channel.
+          </p>
+          
+          <!-- Search Form -->
+          <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+              <form action="/channel" method="GET" class="form-control">
+                <label class="label">
+                  <span class="label-text">Enter YouTube Channel URL or Username</span>
+                </label>
+                <div class="join w-full">
+                  <input 
+                    type="text" 
+                    name="channel" 
+                    placeholder="e.g., https://youtube.com/@username or username" 
+                    class="input input-bordered join-item w-full" 
+                    required
+                  />
+                  <button type="submit" class="btn btn-primary join-item">
+                    Search
+                  </button>
+                </div>
+                <label class="label">
+                  <span class="label-text-alt">Enter a YouTube channel URL, username, or channel ID</span>
+                </label>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="container mx-auto px-4 py-16">
+      <h2 class="text-3xl font-bold text-center mb-12">Features</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h3 class="card-title">🔍 Channel Search</h3>
+            <p>Find any YouTube channel by URL, username, or channel ID instantly.</p>
+          </div>
+        </div>
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h3 class="card-title">📊 Analytics</h3>
+            <p>Get detailed statistics including subscribers, views, and video performance.</p>
+          </div>
+        </div>
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h3 class="card-title">🎬 Video Insights</h3>
+            <p>Analyze video content, engagement rates, and audience demographics.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Searches Section -->
+    <div class="container mx-auto px-4 py-8">
+      <h2 class="text-2xl font-bold text-center mb-8">Popular Channels</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="/channel?channel=mrbeast" class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title text-lg">MrBeast</h3>
+            <p class="text-sm text-base-content/70">YouTube's biggest creator</p>
+          </div>
+        </a>
+        <a href="/channel?channel=pewdiepie" class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title text-lg">PewDiePie</h3>
+            <p class="text-sm text-base-content/70">Gaming and entertainment</p>
+          </div>
+        </a>
+        <a href="/channel?channel=marquesbrownlee" class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title text-lg">MKBHD</h3>
+            <p class="text-sm text-base-content/70">Tech reviews</p>
+          </div>
+        </a>
+        <a href="/channel?channel=veritasium" class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title text-lg">Veritasium</h3>
+            <p class="text-sm text-base-content/70">Science education</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
 </Layout>
