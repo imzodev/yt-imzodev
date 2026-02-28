@@ -1,0 +1,140 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
+
+export const prerender = false;
+
+// Check if user is authenticated
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  return Astro.redirect('/login');
+}
+
+// Get user profile
+const { data: profile } = await supabase
+  .from('users')
+  .select('*')
+  .eq('supabase_user_id', session.user.id)
+  .single();
+---
+
+<Layout title="Dashboard - YouTube Community Portal">
+  <main class="min-h-screen bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center">
+            <h1 class="text-xl font-semibold text-gray-900">YouTube Community Portal</h1>
+          </div>
+          <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">
+              {profile?.email || session.user.email}
+            </span>
+            <form method="POST" action="/api/auth/logout">
+              <button type="submit" class="btn btn-secondary">
+                Sign Out
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div class="px-4 py-6 sm:px-0">
+        <!-- Welcome Section -->
+        <div class="bg-white overflow-hidden shadow rounded-lg mb-6">
+          <div class="px-4 py-5 sm:p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+              Welcome back, {profile?.display_name || session.user.email}!
+            </h2>
+            <p class="text-gray-600">
+              This is your personal dashboard where you can manage your content, subscriptions, and account settings.
+            </p>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Videos</dt>
+                    <dd class="text-lg font-medium text-gray-900">0</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Blog Posts</dt>
+                    <dd class="text-lg font-medium text-gray-900">0</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Code Snippets</dt>
+                    <dd class="text-lg font-medium text-gray-900">0</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <a href="/videos/new" class="btn btn-primary text-center">
+                Add Video
+              </a>
+              <a href="/blog/new" class="btn btn-primary text-center">
+                Write Blog Post
+              </a>
+              <a href="/snippets/new" class="btn btn-primary text-center">
+                Add Snippet
+              </a>
+              <a href="/profile" class="btn btn-secondary text-center">
+                Edit Profile
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
