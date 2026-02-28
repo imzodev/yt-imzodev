@@ -78,7 +78,15 @@ Todos los comandos se ejecutan desde la raíz del proyecto:
 - **Drizzle ORM:** ORM ligero y type-safe para operaciones de base de datos
 - **PostgreSQL:** Base de datos relacional robusta y escalable
 
-## 🚀 Empezando
+## � Documentación
+
+Para obtener información detallada sobre la configuración y la implementación, consulta la carpeta `docs/`:
+
+- **[Guía de Configuración de Base de Datos](docs/DATABASE_SETUP.md)** - Configuración completa con Supabase, Drizzle ORM y Stripe
+- **[Resumen de Implementación](docs/IMPLEMENTATION_SUMMARY.md)** - Visión general de lo implementado
+- **[Índice de Documentación](docs/README.md)** - Guía completa de la documentación
+
+## �🚀 Empezando
 
 ### Prerrequisitos
 
