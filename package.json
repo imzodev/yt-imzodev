@@ -6,9 +6,21 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:types": "supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts",
+    "db:reset": "supabase db reset",
+    "db:start": "supabase db start"
   },
   "dependencies": {
-    "astro": "^5.17.1"
+    "@supabase/supabase-js": "^2.98.0",
+    "astro": "^5.17.1",
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.9",
+    "supabase": "^2.76.15"
   }
 }

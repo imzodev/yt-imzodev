@@ -58,16 +58,66 @@ Todos los comandos se ejecutan desde la raíz del proyecto:
 | `bun astro ...` | Ejecuta comandos CLI como `astro add`, `astro check` |
 | `bun astro -- --help` | Obtiene ayuda usando el Astro CLI |
 
+### Comandos de Base de Datos
+
+| Comando | Acción |
+| :--- | :--- |
+| `bun run db:generate` | Genera migraciones desde el esquema Drizzle |
+| `bun run db:migrate` | Aplica migraciones a la base de datos |
+| `bun run db:types` | Genera tipos TypeScript desde Supabase |
+| `bun run db:reset` | Reinicia la base de datos local |
+| `bun run db:start` | Inicia el servidor de base de datos local |
+
 ## 📚 Tecnologías
 
 - **Astro:** Framework principal para el desarrollo del sitio
 - **TypeScript:** Tipado estático para mayor robustez
 - **Tailwind CSS:** Framework de CSS para estilos modernos
 - **React:** Biblioteca para componentes interactivos
+- **Supabase:** Plataforma de backend con PostgreSQL, autenticación y almacenamiento
+- **Drizzle ORM:** ORM ligero y type-safe para operaciones de base de datos
+- **PostgreSQL:** Base de datos relacional robusta y escalable
 
 ## 🚀 Empezando
 
+### Prerrequisitos
+
+1. **Crea un proyecto en Supabase:**
+   - Ve a [supabase.com](https://supabase.com)
+   - Crea un nuevo proyecto
+   - Obtén tu `DATABASE_URL` desde Settings > Database > Connection String
+   - Obtén tu `SUPABASE_URL` y `SUPABASE_ANON_KEY` desde Settings > API
+
+2. **Configura las variables de entorno:**
+   ```env
+   # .env file
+   SUPABASE_URL=your_supabase_project_url
+   SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   DATABASE_URL=postgresql://user:password@host:5432/dbname
+   ```
+
+### Instalación y Ejecución
+
 1. Clona este repositorio
 2. Ejecuta `bun install` para instalar las dependencias
-3. Ejecuta `bun dev` para iniciar el servidor de desarrollo
-4. Abre `http://localhost:4321` en tu navegador
+3. Configura tus variables de entorno en el archivo `.env`
+4. Ejecuta `bun dev` para iniciar el servidor de desarrollo
+5. Abre `http://localhost:4321` en tu navegador
+
+### Configuración de la Base de Datos
+
+1. **Genera el esquema inicial:**
+   ```bash
+   bun run db:generate
+   ```
+
+2. **Aplica las migraciones:**
+   ```bash
+   bun run db:migrate
+   ```
+
+3. **Genera los tipos TypeScript:**
+   ```bash
+   bun run db:types
+   ```
