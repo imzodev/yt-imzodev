@@ -52,7 +52,7 @@ const jsonLdPayload = jsonLd ? JSON.stringify(jsonLd) : null;
 		{resolvedImage && <meta name="twitter:image" content={resolvedImage} />}
 
 		{jsonLdPayload && (
-			<script type="application/ld+json" set:html={jsonLdPayload} />
+			<script is:inline type="application/ld+json" set:html={jsonLdPayload} />
 		)}
 		<script is:inline>
 			// Apply theme before page render to prevent FOUC

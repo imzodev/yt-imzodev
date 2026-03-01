@@ -16,12 +16,12 @@ export const users = pgTable('users', {
   subscriptionStatus: text('subscription_status').default('active'), // active, canceled, expired
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  emailIdx: index('users_email_idx').on(table.email),
-  usernameIdx: index('users_username_idx').on(table.username),
-  supabaseUserIdIdx: index('users_supabase_user_id_idx').on(table.supabaseUserId),
-  stripeCustomerIdIdx: index('users_stripe_customer_id_idx').on(table.stripeCustomerId),
-}));
+}, (table) => [
+  index('users_email_idx').on(table.email),
+  index('users_username_idx').on(table.username),
+  index('users_supabase_user_id_idx').on(table.supabaseUserId),
+  index('users_stripe_customer_id_idx').on(table.stripeCustomerId),
+]);
 
 // Video Playlists table - Organize videos into YouTube-like playlists
 export const videoPlaylists = pgTable('video_playlists', {
@@ -37,12 +37,12 @@ export const videoPlaylists = pgTable('video_playlists', {
   coverImage: text('cover_image'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  slugIdx: index('video_playlists_slug_idx').on(table.slug),
-  authorIdx: index('video_playlists_author_idx').on(table.authorId),
-  isPublicIdx: index('video_playlists_is_public_idx').on(table.isPublic),
-  isFeaturedIdx: index('video_playlists_is_featured_idx').on(table.isFeatured),
-}));
+}, (table) => [
+  index('video_playlists_slug_idx').on(table.slug),
+  index('video_playlists_author_idx').on(table.authorId),
+  index('video_playlists_is_public_idx').on(table.isPublic),
+  index('video_playlists_is_featured_idx').on(table.isFeatured),
+]);
 
 // Playlist Videos table - Many-to-many relationship between playlists and videos
 export const playlistVideos = pgTable('playlist_videos', {
@@ -51,10 +51,10 @@ export const playlistVideos = pgTable('playlist_videos', {
   videoId: integer('video_id').references(() => videos.id, { onDelete: 'cascade' }),
   position: integer('position').notNull(), // Order in playlist
   addedAt: timestamp('added_at').defaultNow(),
-}, (table) => ({
-  playlistVideoIdx: index('playlist_videos_playlist_video_idx').on(table.playlistId, table.videoId),
-  positionIdx: index('playlist_videos_position_idx').on(table.playlistId, table.position),
-}));
+}, (table) => [
+  index('playlist_videos_playlist_video_idx').on(table.playlistId, table.videoId),
+  index('playlist_videos_position_idx').on(table.playlistId, table.position),
+]);
 
 // Videos table - YouTube video catalog with playlist support
 export const videos = pgTable('videos', {
@@ -73,12 +73,12 @@ export const videos = pgTable('videos', {
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  youtubeIdIdx: index('videos_youtube_id_idx').on(table.youtubeId),
-  categoryIdx: index('videos_category_idx').on(table.categoryId),
-  difficultyIdx: index('videos_difficulty_idx').on(table.difficulty),
-  isPremiumIdx: index('videos_is_premium_idx').on(table.isPremium),
-}));
+}, (table) => [
+  index('videos_youtube_id_idx').on(table.youtubeId),
+  index('videos_category_idx').on(table.categoryId),
+  index('videos_difficulty_idx').on(table.difficulty),
+  index('videos_is_premium_idx').on(table.isPremium),
+]);
 
 // Video Categories table
 export const videoCategories = pgTable('video_categories', {
@@ -89,9 +89,9 @@ export const videoCategories = pgTable('video_categories', {
   icon: text('icon'),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
-}, (table) => ({
-  slugIdx: index('video_categories_slug_idx').on(table.slug),
-}));
+}, (table) => [
+  index('video_categories_slug_idx').on(table.slug),
+]);
 
 // Subscription Plans table - Define available subscription tiers
 export const subscriptionPlans = pgTable('subscription_plans', {
@@ -108,11 +108,11 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   sortOrder: integer('sort_order').default(0),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  slugIdx: index('subscription_plans_slug_idx').on(table.slug),
-  stripePriceIdIdx: index('subscription_plans_stripe_price_id_idx').on(table.stripePriceId),
-  isActiveIdx: index('subscription_plans_is_active_idx').on(table.isActive),
-}));
+}, (table) => [
+  index('subscription_plans_slug_idx').on(table.slug),
+  index('subscription_plans_stripe_price_id_idx').on(table.stripePriceId),
+  index('subscription_plans_is_active_idx').on(table.isActive),
+]);
 
 // Subscriptions table - Manage user subscriptions and payments
 export const subscriptions = pgTable('subscriptions', {
@@ -129,12 +129,12 @@ export const subscriptions = pgTable('subscriptions', {
   metadata: json('metadata'), // Additional subscription data
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  userIdIdx: index('subscriptions_user_id_idx').on(table.userId),
-  stripeSubscriptionIdIdx: index('subscriptions_stripe_subscription_id_idx').on(table.stripeSubscriptionId),
-  stripeCustomerIdIdx: index('subscriptions_stripe_customer_id_idx').on(table.stripeCustomerId),
-  statusIdx: index('subscriptions_status_idx').on(table.status),
-}));
+}, (table) => [
+  index('subscriptions_user_id_idx').on(table.userId),
+  index('subscriptions_stripe_subscription_id_idx').on(table.stripeSubscriptionId),
+  index('subscriptions_stripe_customer_id_idx').on(table.stripeCustomerId),
+  index('subscriptions_status_idx').on(table.status),
+]);
 
 // Payments table - Track one-time payments and transactions
 export const payments = pgTable('payments', {
@@ -149,11 +149,11 @@ export const payments = pgTable('payments', {
   metadata: json('metadata'), // Additional payment data
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  userIdIdx: index('payments_user_id_idx').on(table.userId),
-  stripePaymentIntentIdIdx: index('payments_stripe_payment_intent_id_idx').on(table.stripePaymentIntentId),
-  statusIdx: index('payments_status_idx').on(table.status),
-}));
+}, (table) => [
+  index('payments_user_id_idx').on(table.userId),
+  index('payments_stripe_payment_intent_id_idx').on(table.stripePaymentIntentId),
+  index('payments_status_idx').on(table.status),
+]);
 
 // Snippets table - Code snippets, commands, and configurations from videos
 export const snippets = pgTable('snippets', {
@@ -173,14 +173,14 @@ export const snippets = pgTable('snippets', {
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  videoIdx: index('snippets_video_idx').on(table.videoId),
-  categoryIdx: index('snippets_category_idx').on(table.categoryId),
-  authorIdx: index('snippets_author_idx').on(table.authorId),
-  accessLevelIdx: index('snippets_access_level_idx').on(table.accessLevel),
-  languageIdx: index('snippets_language_idx').on(table.language),
-  typeIdx: index('snippets_type_idx').on(table.type),
-}));
+}, (table) => [
+  index('snippets_video_idx').on(table.videoId),
+  index('snippets_category_idx').on(table.categoryId),
+  index('snippets_author_idx').on(table.authorId),
+  index('snippets_access_level_idx').on(table.accessLevel),
+  index('snippets_language_idx').on(table.language),
+  index('snippets_type_idx').on(table.type),
+]);
 
 // Snippet Categories table
 export const snippetCategories = pgTable('snippet_categories', {
@@ -191,9 +191,9 @@ export const snippetCategories = pgTable('snippet_categories', {
   icon: text('icon'),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
-}, (table) => ({
-  slugIdx: index('snippet_categories_slug_idx').on(table.slug),
-}));
+}, (table) => [
+  index('snippet_categories_slug_idx').on(table.slug),
+]);
 
 // Blog Posts table - Technical articles and video support content
 export const blogPosts = pgTable('blog_posts', {
@@ -215,13 +215,13 @@ export const blogPosts = pgTable('blog_posts', {
   publishedAt: timestamp('published_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  slugIdx: index('blog_posts_slug_idx').on(table.slug),
-  authorIdx: index('blog_posts_author_idx').on(table.authorId),
-  categoryIdx: index('blog_posts_category_idx').on(table.categoryId),
-  accessLevelIdx: index('blog_posts_access_level_idx').on(table.accessLevel),
-  statusIdx: index('blog_posts_status_idx').on(table.status),
-}));
+}, (table) => [
+  index('blog_posts_slug_idx').on(table.slug),
+  index('blog_posts_author_idx').on(table.authorId),
+  index('blog_posts_category_idx').on(table.categoryId),
+  index('blog_posts_access_level_idx').on(table.accessLevel),
+  index('blog_posts_status_idx').on(table.status),
+]);
 
 // Blog Categories table
 export const blogCategories = pgTable('blog_categories', {
@@ -232,9 +232,9 @@ export const blogCategories = pgTable('blog_categories', {
   color: text('color'),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
-}, (table) => ({
-  slugIdx: index('blog_categories_slug_idx').on(table.slug),
-}));
+}, (table) => [
+  index('blog_categories_slug_idx').on(table.slug),
+]);
 
 // Forum Categories table
 export const forumCategories = pgTable('forum_categories', {
@@ -247,10 +247,10 @@ export const forumCategories = pgTable('forum_categories', {
   accessLevel: text('access_level').default('public'), // public, member, premium
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
-}, (table) => ({
-  orderIdx: index('forum_categories_order_idx').on(table.order),
-  accessLevelIdx: index('forum_categories_access_level_idx').on(table.accessLevel),
-}));
+}, (table) => [
+  index('forum_categories_order_idx').on(table.order),
+  index('forum_categories_access_level_idx').on(table.accessLevel),
+]);
 
 // Forum Posts table - Discussion threads in the community forum
 export const forumPosts = pgTable('forum_posts', {
@@ -267,12 +267,12 @@ export const forumPosts = pgTable('forum_posts', {
   status: text('status').default('active'), // active, locked, archived
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  authorIdx: index('forum_posts_author_idx').on(table.authorId),
-  categoryIdx: index('forum_posts_category_idx').on(table.categoryId),
-  statusIdx: index('forum_posts_status_idx').on(table.status),
-  isPinnedIdx: index('forum_posts_is_pinned_idx').on(table.isPinned),
-}));
+}, (table) => [
+  index('forum_posts_author_idx').on(table.authorId),
+  index('forum_posts_category_idx').on(table.categoryId),
+  index('forum_posts_status_idx').on(table.status),
+  index('forum_posts_is_pinned_idx').on(table.isPinned),
+]);
 
 // Forum Replies table - Replies to forum posts with nesting support
 export const forumReplies = pgTable('forum_replies', {
@@ -285,11 +285,11 @@ export const forumReplies = pgTable('forum_replies', {
   isAnswer: boolean('is_answer').default(false), // Marked as best answer
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  postIdx: index('forum_replies_post_idx').on(table.postId),
-  authorIdx: index('forum_replies_author_idx').on(table.authorId),
-  parentIdx: index('forum_replies_parent_idx').on(table.parentId),
-}));
+}, (table) => [
+  index('forum_replies_post_idx').on(table.postId),
+  index('forum_replies_author_idx').on(table.authorId),
+  index('forum_replies_parent_idx').on(table.parentId),
+]);
 
 // Newsletter Subscriptions table
 export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
@@ -302,11 +302,11 @@ export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   unsubscribedAt: timestamp('unsubscribed_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  emailIdx: index('newsletter_subscriptions_email_idx').on(table.email),
-  userIdIdx: index('newsletter_subscriptions_user_id_idx').on(table.userId),
-  statusIdx: index('newsletter_subscriptions_status_idx').on(table.status),
-}));
+}, (table) => [
+  index('newsletter_subscriptions_email_idx').on(table.email),
+  index('newsletter_subscriptions_user_id_idx').on(table.userId),
+  index('newsletter_subscriptions_status_idx').on(table.status),
+]);
 
 // Lab Tools table - Interactive tools and utilities for members
 export const labTools = pgTable('lab_tools', {
@@ -321,11 +321,11 @@ export const labTools = pgTable('lab_tools', {
   usageCount: integer('usage_count').default(0),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  slugIdx: index('lab_tools_slug_idx').on(table.slug),
-  typeIdx: index('lab_tools_type_idx').on(table.type),
-  accessLevelIdx: index('lab_tools_access_level_idx').on(table.accessLevel),
-}));
+}, (table) => [
+  index('lab_tools_slug_idx').on(table.slug),
+  index('lab_tools_type_idx').on(table.type),
+  index('lab_tools_access_level_idx').on(table.accessLevel),
+]);
 
 // User Activity table - Track user engagement and analytics
 export const userActivity = pgTable('user_activity', {
@@ -338,11 +338,11 @@ export const userActivity = pgTable('user_activity', {
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at').defaultNow(),
-}, (table) => ({
-  userIdIdx: index('user_activity_user_id_idx').on(table.userId),
-  actionIdx: index('user_activity_action_idx').on(table.action),
-  createdAtIdx: index('user_activity_created_at_idx').on(table.createdAt),
-}));
+}, (table) => [
+  index('user_activity_user_id_idx').on(table.userId),
+  index('user_activity_action_idx').on(table.action),
+  index('user_activity_created_at_idx').on(table.createdAt),
+]);
 
 // Export all tables for easy import
 export const schema = {

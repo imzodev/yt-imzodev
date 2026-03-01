@@ -255,7 +255,7 @@ const csrfToken = getCsrfToken(Astro.cookies);
     </div>
   </main>
 
-  <script define:vars={{ csrfToken }}>
+  <script is:inline define:vars={{ csrfToken }}>
     const avatarUpload = document.getElementById('avatar-upload');
     const avatarPreview = document.getElementById('avatar-preview');
     const avatarInitial = document.getElementById('avatar-initial');

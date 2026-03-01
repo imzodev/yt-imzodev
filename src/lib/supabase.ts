@@ -33,14 +33,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export function getSupabaseServerClient(cookies: AstroCookies) {
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(key: string) {
-        return cookies.get(key)?.value;
+      getAll() {
+        return Array.from(cookies.headers()).map(([name, value]) => ({ name, value }));
       },
-      set(key: string, value: string, options: CookieOptions) {
-        cookies.set(key, value, { ...options, path: '/' });
-      },
-      remove(key: string, options: CookieOptions) {
-        cookies.delete(key, { ...options, path: '/' });
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        for (const cookie of cookiesToSet) {
+          cookies.set(cookie.name, cookie.value, { ...cookie.options, path: '/' });
+        }
       },
     },
   });
