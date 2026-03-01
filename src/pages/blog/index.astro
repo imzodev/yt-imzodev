@@ -29,9 +29,31 @@ if (selectedCategory) {
 }
 
 const { data: posts, error } = await query;
+
+const canonicalUrl = selectedCategory
+  ? new URL(`/blog?category=${selectedCategory}`, Astro.url).href
+  : new URL('/blog', Astro.url).href;
+
+const pageDescription = selectedCategory
+  ? `Browse ${selectedCategory} posts, tutorials, and creator updates from YouTube Community Portal.`
+  : 'Browse blog posts, tutorials, and creator updates from YouTube Community Portal.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: 'YouTube Community Portal Blog',
+  description: pageDescription,
+  url: canonicalUrl,
+};
 ---
 
-<Layout title="Blog - YouTube Community Portal">
+<Layout
+  title="Blog - YouTube Community Portal"
+  description={pageDescription}
+  canonical={canonicalUrl}
+  type="website"
+  jsonLd={jsonLd}
+>
   <Navbar />
   <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
     <div class="max-w-7xl mx-auto space-y-8">

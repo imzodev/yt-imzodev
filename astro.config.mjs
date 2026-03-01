@@ -8,6 +8,7 @@ import mdx from '@astrojs/mdx';
 
 // https://astro.build/config
 export default defineConfig({
+  site: process.env.PUBLIC_SITE_URL || 'http://localhost:4321',
   output: 'server',
 
   vite: {

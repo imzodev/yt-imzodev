@@ -98,9 +98,39 @@ const formatDate = (dateString: string) => {
     year: 'numeric'
   }).format(date);
 };
+
+const canonicalUrl = new URL(`/blog/${post.slug}`, Astro.url).href;
+const plainContent = (post.content || '').replace(/[#>*_`\-[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+const pageDescription = post.excerpt || plainContent.slice(0, 160) || 'Read this post on YouTube Community Portal.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.title,
+  description: pageDescription,
+  datePublished: post.published_at,
+  dateModified: post.updated_at || post.published_at,
+  mainEntityOfPage: canonicalUrl,
+  image: post.featured_image ? [new URL(post.featured_image, Astro.url).href] : undefined,
+  author: {
+    '@type': 'Person',
+    name: post.author?.name || 'Anonymous',
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'YouTube Community Portal',
+  },
+};
 ---
 
-<Layout title={`${post.title} - YouTube Community Portal`}>
+<Layout
+  title={`${post.title} - YouTube Community Portal`}
+  description={pageDescription}
+  canonical={canonicalUrl}
+  image={post.featured_image}
+  type="article"
+  jsonLd={jsonLd}
+>
   <Navbar />
   <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
     <article class="max-w-5xl mx-auto space-y-8 bg-base-100 p-8 md:p-12 rounded-2xl shadow-xl">
