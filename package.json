@@ -18,11 +18,18 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/vite": "^4.2.1",
+    "@types/dompurify": "^3.2.0",
+    "@types/jsdom": "^28.0.0",
+    "@types/marked": "^6.0.0",
     "astro": "^5.17.1",
     "daisyui": "^5.5.19",
+    "dompurify": "^3.3.1",
     "drizzle-orm": "^0.45.1",
+    "jsdom": "^28.1.0",
+    "marked": "^17.0.3",
     "nanoid": "^5.1.6",
     "postgres": "^3.4.8",
+    "shiki": "^4.0.0",
     "stripe": "^20.4.0"
   },
   "devDependencies": {

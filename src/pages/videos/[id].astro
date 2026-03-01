@@ -1,0 +1,122 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import { supabase } from '../../lib/supabase';
+
+const { id } = Astro.params;
+
+// Increment view count via RPC or direct update
+// For simplicity in read-only phase, we will just fetch the video.
+// If you create an RPC like increment_video_views(video_id) you can call it here.
+
+// Fetch video details
+const { data: video, error } = await supabase
+  .from('videos')
+  .select(`
+    *,
+    category:video_categories(name, slug)
+  `)
+  .eq('id', id)
+  .single();
+
+if (error || !video || !video.is_active) {
+  return Astro.redirect('/404');
+}
+
+// Format duration
+const formatDuration = (seconds: number) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+// Format date
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date);
+};
+---
+
+<Layout title={`${video.title} - YouTube Community Portal`}>
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <!-- Breadcrumbs -->
+      <div class="text-sm breadcrumbs text-base-content/70">
+        <ul>
+          <li><a href="/videos">Videos</a></li>
+          {video.category && (
+            <li><a href={`/videos?category=${video.category.slug}`}>{video.category.name}</a></li>
+          )}
+          <li class="truncate max-w-xs">{video.title}</li>
+        </ul>
+      </div>
+
+      <!-- Video Player Container -->
+      <div class="bg-black rounded-xl overflow-hidden shadow-2xl aspect-video w-full relative">
+        <iframe
+          src={`https://www.youtube.com/embed/${video.youtube_id}?autoplay=0&rel=0`}
+          title={video.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          class="absolute top-0 left-0 w-full h-full border-0"
+        ></iframe>
+      </div>
+
+      <!-- Video Details -->
+      <div class="bg-base-100 rounded-xl shadow-sm p-6 space-y-4">
+        <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+          <div class="space-y-2">
+            <h1 class="text-2xl md:text-3xl font-bold text-base-content leading-tight">
+              {video.title}
+            </h1>
+            <div class="flex flex-wrap items-center gap-4 text-sm text-base-content/70">
+              <span class="flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+                {video.view_count.toLocaleString()} views
+              </span>
+              <span class="flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                {formatDate(video.published_at)}
+              </span>
+              <span class="flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {formatDuration(video.duration)}
+              </span>
+            </div>
+          </div>
+          
+          <div class="flex gap-2">
+            <button class="btn btn-outline btn-sm">
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+              </svg>
+              Share
+            </button>
+          </div>
+        </div>
+
+        <div class="divider my-0"></div>
+
+        <div class="prose prose-base-content max-w-none">
+          <p class="whitespace-pre-wrap">{video.description}</p>
+        </div>
+      </div>
+      
+    </div>
+  </main>
+</Layout>

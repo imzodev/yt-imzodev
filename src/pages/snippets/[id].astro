@@ -1,0 +1,205 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import { supabase } from '../../lib/supabase';
+import { codeToHtml } from 'shiki';
+import { marked } from 'marked';
+
+const { id } = Astro.params;
+
+// Fetch snippet details
+const { data: snippet, error } = await supabase
+  .from('snippets')
+  .select(`
+    *,
+    category:snippet_categories(name, slug),
+    author:users(name, avatar)
+  `)
+  .eq('id', id)
+  .single();
+
+if (error || !snippet) {
+  return Astro.redirect('/404');
+}
+
+// Generate highlighted code
+let highlightedCode = '';
+try {
+  // Use shiki to highlight the code
+  highlightedCode = await codeToHtml(snippet.content, {
+    lang: snippet.language || 'typescript',
+    theme: 'github-dark'
+  });
+} catch (e) {
+  console.error("Failed to highlight code:", e);
+  // Fallback if shiki fails or language is unsupported
+  highlightedCode = `<pre><code>${snippet.content}</code></pre>`;
+}
+
+// Parse markdown description if exists
+let descriptionHtml = '';
+if (snippet.description) {
+  descriptionHtml = await marked.parse(snippet.description);
+}
+---
+
+<Layout title={`${snippet.title} - YouTube Community Portal`}>
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <!-- Breadcrumbs -->
+      <div class="text-sm breadcrumbs text-base-content/70">
+        <ul>
+          <li><a href="/snippets">Snippets</a></li>
+          {snippet.category && (
+            <li><a href={`/snippets?category=${snippet.category.slug}`}>{snippet.category.name}</a></li>
+          )}
+          <li class="truncate max-w-xs">{snippet.title}</li>
+        </ul>
+      </div>
+
+      <div class="bg-base-100 rounded-xl shadow-xl overflow-hidden border border-base-300">
+        <!-- Header -->
+        <div class="p-6 md:p-8 border-b border-base-300">
+          <div class="flex justify-between items-start gap-4">
+            <div>
+              <div class="flex items-center gap-3 mb-3">
+                <span class="badge badge-primary uppercase tracking-wider text-xs font-bold">
+                  {snippet.language}
+                </span>
+                <span class="text-xs text-base-content/60 font-mono">
+                  {snippet.type}
+                </span>
+              </div>
+              <h1 class="text-2xl md:text-3xl font-bold text-base-content mb-2">
+                {snippet.title}
+              </h1>
+            </div>
+            
+            <div class="flex gap-2">
+              <button class="btn btn-circle btn-ghost" title="Like">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="mt-6 flex items-center justify-between text-sm">
+            <div class="flex items-center space-x-3">
+              {snippet.author?.avatar ? (
+                <div class="avatar">
+                  <div class="w-8 rounded-full">
+                    <img src={snippet.author.avatar} alt={snippet.author.name} />
+                  </div>
+                </div>
+              ) : (
+                <div class="avatar placeholder">
+                  <div class="bg-neutral text-neutral-content rounded-full w-8">
+                    <span>{snippet.author?.name?.charAt(0) || '?'}</span>
+                  </div>
+                </div>
+              )}
+              <span class="font-medium text-base-content">{snippet.author?.name || 'Anonymous'}</span>
+            </div>
+            
+            <div class="text-base-content/60 flex items-center gap-4">
+              <span class="flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+                {snippet.views || 0} views
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        {descriptionHtml && (
+          <div class="p-6 md:px-8 bg-base-200/30 prose prose-sm max-w-none border-b border-base-300" set:html={descriptionHtml}></div>
+        )}
+
+        <!-- Code Block -->
+        <div class="relative group bg-[#0d1117]">
+          <div class="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button 
+              id="copy-btn" 
+              class="btn btn-sm btn-square btn-neutral border border-base-300 shadow-sm bg-base-100 text-base-content"
+              data-code={snippet.content}
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto text-sm p-4 md:p-6 custom-scrollbar">
+            <!-- Render the highlighted code -->
+            <div set:html={highlightedCode} class="shiki-container" />
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </main>
+</Layout>
+
+<style is:global>
+  /* Customizing the Shiki output to fit nicely */
+  .shiki-container pre {
+    background-color: transparent !important;
+    margin: 0;
+    padding: 0;
+  }
+  .shiki-container code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    line-height: 1.5;
+  }
+  
+  /* Custom scrollbar for the code block */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+</style>
+
+<script>
+  // Copy to clipboard functionality
+  const copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const code = copyBtn.dataset.code;
+      if (!code) return;
+      
+      try {
+        await navigator.clipboard.writeText(code);
+        
+        // Show success state
+        const originalHtml = copyBtn.innerHTML;
+        copyBtn.innerHTML = `
+          <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        `;
+        
+        setTimeout(() => {
+          copyBtn.innerHTML = originalHtml;
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+      }
+    });
+  }
+</script>

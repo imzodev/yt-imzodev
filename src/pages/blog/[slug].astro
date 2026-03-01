@@ -1,0 +1,126 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import { supabase } from '../../lib/supabase';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+
+const { slug } = Astro.params;
+
+// Fetch post details
+const { data: post, error } = await supabase
+  .from('blog_posts')
+  .select(`
+    *,
+    category:blog_categories(name, slug),
+    author:users(name, avatar)
+  `)
+  .eq('slug', slug)
+  .single();
+
+if (error || !post || post.status !== 'published') {
+  return Astro.redirect('/404');
+}
+
+// Convert markdown to HTML securely
+let contentHtml = '';
+try {
+  const rawHtml = await marked.parse(post.content || '');
+  const window = new JSDOM('').window;
+  const purify = DOMPurify(window);
+  contentHtml = purify.sanitize(rawHtml);
+} catch (e) {
+  console.error("Error rendering markdown:", e);
+  contentHtml = "<p>Error rendering content.</p>";
+}
+
+// Format date
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date);
+};
+---
+
+<Layout title={`${post.title} - YouTube Community Portal`}>
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
+    <article class="max-w-4xl mx-auto space-y-8 bg-base-100 p-8 md:p-12 rounded-2xl shadow-xl">
+      
+      <!-- Breadcrumbs -->
+      <div class="text-sm breadcrumbs text-base-content/70">
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          {post.category && (
+            <li><a href={`/blog?category=${post.category.slug}`}>{post.category.name}</a></li>
+          )}
+        </ul>
+      </div>
+
+      <!-- Header -->
+      <header class="space-y-6">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-base-content leading-tight">
+          {post.title}
+        </h1>
+        
+        <div class="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-base-200">
+          <div class="flex items-center space-x-4">
+            {post.author?.avatar ? (
+              <div class="avatar">
+                <div class="w-12 rounded-full">
+                  <img src={post.author.avatar} alt={post.author.name} />
+                </div>
+              </div>
+            ) : (
+              <div class="avatar placeholder">
+                <div class="bg-neutral text-neutral-content rounded-full w-12 text-xl">
+                  <span>{post.author?.name?.charAt(0) || '?'}</span>
+                </div>
+              </div>
+            )}
+            <div>
+              <p class="font-semibold text-base-content">{post.author?.name || 'Anonymous'}</p>
+              <p class="text-sm text-base-content/60">{formatDate(post.published_at)}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-4 text-sm text-base-content/60">
+            <span class="flex items-center">
+              <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+              {post.view_count || 0} views
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {post.featured_image && (
+        <figure class="aspect-video w-full rounded-xl overflow-hidden">
+          <img src={post.featured_image} alt={post.title} class="w-full h-full object-cover" />
+        </figure>
+      )}
+
+      <!-- Content -->
+      <div 
+        class="prose prose-lg md:prose-xl prose-base-content max-w-none"
+        set:html={contentHtml}
+      />
+      
+      {post.tags && post.tags.length > 0 && (
+        <div class="mt-12 pt-6 border-t border-base-200">
+          <div class="flex flex-wrap gap-2">
+            {post.tags.map((tag: string) => (
+              <span class="badge badge-outline">{tag}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
+  </main>
+</Layout>
