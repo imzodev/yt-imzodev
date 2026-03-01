@@ -20,16 +20,16 @@ const { data: profile } = await supabase
 ---
 
 <Layout title="Dashboard - YouTube Community Portal">
-  <main class="min-h-screen bg-gray-50">
+  <main class="min-h-screen bg-base-200">
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b border-gray-200">
+    <nav class="bg-base-100 shadow-sm border-b border-base-300">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex items-center">
-            <h1 class="text-xl font-semibold text-gray-900">YouTube Community Portal</h1>
+            <h1 class="text-xl font-semibold text-base-content">YouTube Community Portal</h1>
           </div>
           <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">
+            <span class="text-sm text-base-content/70">
               {profile?.email || session.user.email}
             </span>
             <form method="POST" action="/api/auth/logout">
@@ -46,12 +46,12 @@ const { data: profile } = await supabase
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <div class="px-4 py-6 sm:px-0">
         <!-- Welcome Section -->
-        <div class="bg-white overflow-hidden shadow rounded-lg mb-6">
+        <div class="bg-base-100 overflow-hidden shadow rounded-lg mb-6">
           <div class="px-4 py-5 sm:p-6">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+            <h2 class="text-2xl font-bold text-base-content mb-2">
               Welcome back, {profile?.display_name || session.user.email}!
             </h2>
-            <p class="text-gray-600">
+            <p class="text-base-content/70">
               This is your personal dashboard where you can manage your content, subscriptions, and account settings.
             </p>
           </div>
@@ -59,7 +59,7 @@ const { data: profile } = await supabase
 
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="bg-base-100 overflow-hidden shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
               <div class="flex items-center">
                 <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
@@ -69,15 +69,15 @@ const { data: profile } = await supabase
                 </div>
                 <div class="ml-5 w-0 flex-1">
                   <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">Videos</dt>
-                    <dd class="text-lg font-medium text-gray-900">0</dd>
+                    <dt class="text-sm font-medium text-base-content/60 truncate">Videos</dt>
+                    <dd class="text-lg font-medium text-base-content">0</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="bg-base-100 overflow-hidden shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
               <div class="flex items-center">
                 <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
@@ -87,15 +87,15 @@ const { data: profile } = await supabase
                 </div>
                 <div class="ml-5 w-0 flex-1">
                   <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">Blog Posts</dt>
-                    <dd class="text-lg font-medium text-gray-900">0</dd>
+                    <dt class="text-sm font-medium text-base-content/60 truncate">Blog Posts</dt>
+                    <dd class="text-lg font-medium text-base-content">0</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="bg-base-100 overflow-hidden shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
               <div class="flex items-center">
                 <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
@@ -105,8 +105,8 @@ const { data: profile } = await supabase
                 </div>
                 <div class="ml-5 w-0 flex-1">
                   <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">Code Snippets</dt>
-                    <dd class="text-lg font-medium text-gray-900">0</dd>
+                    <dt class="text-sm font-medium text-base-content/60 truncate">Code Snippets</dt>
+                    <dd class="text-lg font-medium text-base-content">0</dd>
                   </dl>
                 </div>
               </div>
@@ -115,9 +115,9 @@ const { data: profile } = await supabase
         </div>
 
         <!-- Quick Actions -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="bg-base-100 overflow-hidden shadow rounded-lg">
           <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <h3 class="text-lg font-medium text-base-content mb-4">Quick Actions</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <a href="/videos/new" class="btn btn-primary text-center">
                 Add Video
