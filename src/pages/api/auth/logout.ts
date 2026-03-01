@@ -1,23 +1,11 @@
-import { supabase } from '../../../lib/supabase';
+import type { APIRoute } from 'astro';
+import { getSupabaseServerClient } from '../../../lib/supabase';
 
-export async function POST({ Astro }) {
-  try {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error('Logout error:', error);
-      return new Response(JSON.stringify({ error: 'Logout failed' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    return Astro.redirect('/login');
-  } catch (err) {
-    console.error('Unexpected logout error:', err);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-}
+export const POST: APIRoute = async ({ cookies, redirect }) => {
+  const supabase = getSupabaseServerClient(cookies);
+  
+  // Call signOut on the server client to clear the session securely
+  await supabase.auth.signOut();
+  
+  return redirect('/login');
+};

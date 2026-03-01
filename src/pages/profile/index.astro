@@ -1,0 +1,316 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import Alert from '../../components/ui/Alert.astro';
+import { getSession, getUserProfile } from '../../lib/server/auth';
+import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+
+export const prerender = false;
+
+// Check if user is authenticated
+const authResult = await getSession(Astro, { requireAuth: true });
+if (authResult instanceof Response) return authResult;
+const { user, supabase } = authResult;
+
+let message = '';
+let isError = false;
+
+// Handle form submission
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  
+  // Validate CSRF token
+  const csrfToken = formData.get('csrf_token') as string | null;
+  if (!validateCsrfToken(Astro.cookies, csrfToken)) {
+    message = 'Invalid request. Please try again.';
+    isError = true;
+  } else {
+    const name = formData.get('name') as string;
+    const username = formData.get('username') as string;
+    
+    // Update public user profile
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ name, username })
+      .eq('supabase_user_id', user!.id);
+      
+    if (updateError) {
+      console.error('Error updating profile:', updateError);
+      message = 'Failed to update profile. Username might be taken.';
+      isError = true;
+    } else {
+      message = 'Profile updated successfully!';
+      isError = false;
+    }
+  }
+}
+
+// Fetch current profile data
+const { data: profile } = await supabase
+  .from('users')
+  .select('*')
+  .eq('supabase_user_id', user!.id)
+  .single();
+
+// Fetch subscription data
+const { data: subscription } = await supabase
+  .from('subscriptions')
+  .select('*, subscription_plans(name)')
+  .eq('user_id', profile?.id)
+  .eq('status', 'active')
+  .single();
+
+// Fetch recent activity
+const { data: recentActivity } = await supabase
+  .from('user_activity')
+  .select('*')
+  .eq('user_id', profile?.id)
+  .order('created_at', { ascending: false })
+  .limit(5);
+
+const csrfToken = getCsrfToken(Astro.cookies);
+---
+
+<Layout title="Your Profile - YouTube Community Portal">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto space-y-8 mt-16">
+      
+      <!-- Profile Header -->
+      <div class="bg-base-100 shadow rounded-lg p-6">
+        <div class="flex flex-col sm:flex-row items-center gap-6">
+          <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-upload').click()">
+            <div class="avatar placeholder">
+              <div class="bg-primary/20 text-primary rounded-full w-24 h-24 text-3xl font-bold overflow-hidden ring ring-primary ring-offset-base-100 ring-offset-2">
+                {profile?.avatar ? (
+                  <img src={profile.avatar} alt="Profile Avatar" class="w-full h-full object-cover" id="avatar-preview" />
+                ) : (
+                  <span id="avatar-initial">{profile?.name ? profile.name.charAt(0).toUpperCase() : profile?.email?.charAt(0).toUpperCase() || '?'}</span>
+                )}
+              </div>
+            </div>
+            <div class="absolute inset-0 bg-base-300/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg class="w-8 h-8 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <input type="file" id="avatar-upload" class="hidden" accept="image/*" />
+          </div>
+          <div class="text-center sm:text-left">
+            <h1 class="text-2xl font-bold text-base-content">{profile?.name || 'Complete your profile'}</h1>
+            <p class="text-base-content/70">@{profile?.username || 'set_username'}</p>
+            <div class="mt-2 flex gap-2 justify-center sm:justify-start">
+              <div class="badge badge-primary">{profile?.role || 'Member'}</div>
+              {subscription && <div class="badge badge-secondary">{subscription.subscription_plans?.name || 'Premium'}</div>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Settings Form (Left Column, takes up 2/3) -->
+        <div class="lg:col-span-2 space-y-8">
+          <div class="bg-base-100 shadow rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-6 border-b border-base-300 pb-4">Profile Settings</h2>
+            
+            {message && (
+              <div class="mb-6">
+                <Alert type={isError ? 'error' : 'success'} message={message} />
+              </div>
+            )}
+
+            <form method="POST" class="space-y-6">
+              <input type="hidden" name="csrf_token" value={csrfToken} />
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-control w-full">
+                  <label class="label" for="username">
+                    <span class="label-text">Username</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    value={profile?.username || ''} 
+                    class="input input-bordered w-full focus:border-primary focus:ring-1 focus:ring-primary" 
+                    placeholder="e.g. tech_ninja"
+                    pattern="^[a-zA-Z0-9_]{3,20}$"
+                    title="3-20 characters, alphanumeric and underscores only"
+                  />
+                </div>
+
+                <div class="form-control w-full">
+                  <label class="label" for="name">
+                    <span class="label-text">Display Name</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    value={profile?.name || ''} 
+                    class="input input-bordered w-full focus:border-primary focus:ring-1 focus:ring-primary" 
+                    placeholder="e.g. John Doe"
+                  />
+                </div>
+              </div>
+
+              <div class="form-control w-full">
+                <label class="label" for="email">
+                  <span class="label-text">Email Address</span>
+                </label>
+                <input 
+                  type="email" 
+                  id="email" 
+                  value={profile?.email} 
+                  disabled 
+                  class="input input-bordered w-full bg-base-200 text-base-content/50" 
+                />
+                <label class="label">
+                  <span class="label-text-alt">Email cannot be changed directly.</span>
+                </label>
+              </div>
+
+              <div class="pt-4 flex justify-end">
+                <button type="submit" class="btn btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          <!-- Danger Zone -->
+          <div class="bg-base-100 shadow rounded-lg p-6 border border-error/20">
+            <h2 class="text-xl font-semibold mb-4 text-error border-b border-error/20 pb-4">Security</h2>
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-medium">Password</h3>
+                <p class="text-sm text-base-content/70">Update your password to keep your account secure.</p>
+              </div>
+              <a href="/update-password" class="btn btn-outline">Change Password</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column (takes up 1/3) -->
+        <div class="space-y-8">
+          <!-- Subscription Info -->
+          <div class="bg-base-100 shadow rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 border-b border-base-300 pb-4">Subscription</h2>
+            {subscription ? (
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-base-content/70">Plan</span>
+                  <span class="font-semibold">{subscription.subscription_plans?.name || 'Unknown'}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-base-content/70">Status</span>
+                  <span class="badge badge-success gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                    Active
+                  </span>
+                </div>
+                {subscription.current_period_end && (
+                  <div class="flex justify-between items-center">
+                    <span class="text-base-content/70">Renews</span>
+                    <span class="text-sm">{new Date(subscription.current_period_end).toLocaleDateString()}</span>
+                  </div>
+                )}
+                <button class="btn btn-outline btn-sm w-full mt-4">Manage Billing</button>
+              </div>
+            ) : (
+              <div class="text-center space-y-4 py-2">
+                <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <p class="text-base-content/70 text-sm">You are currently on the free plan.</p>
+                <a href="/pricing" class="btn btn-primary w-full">Upgrade to Pro</a>
+              </div>
+            )}
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="bg-base-100 shadow rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 border-b border-base-300 pb-4">Recent Activity</h2>
+            {recentActivity && recentActivity.length > 0 ? (
+              <ul class="space-y-4">
+                {recentActivity.map((activity) => (
+                  <li class="flex gap-3 text-sm">
+                    <div class="mt-1 w-2 h-2 rounded-full bg-primary shrink-0"></div>
+                    <div>
+                      <p class="text-base-content capitalize">{activity.action.replace(/_/g, ' ')}</p>
+                      <p class="text-xs text-base-content/50">{new Date(activity.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="text-sm text-base-content/50 text-center py-4">No recent activity found.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script define:vars={{ csrfToken }}>
+    const avatarUpload = document.getElementById('avatar-upload');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const avatarInitial = document.getElementById('avatar-initial');
+
+    avatarUpload?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file.');
+        return;
+      }
+
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB.');
+        return;
+      }
+
+      // Show preview immediately for better UX
+      const objectUrl = URL.createObjectURL(file);
+      if (avatarPreview) {
+        avatarPreview.src = objectUrl;
+      } else if (avatarInitial) {
+        // Replace initials with image
+        const img = document.createElement('img');
+        img.src = objectUrl;
+        img.alt = "Profile Avatar";
+        img.className = "w-full h-full object-cover";
+        img.id = "avatar-preview";
+        avatarInitial.replaceWith(img);
+      }
+
+      // Upload to server
+      const formData = new FormData();
+      formData.append('avatar', file);
+      formData.append('csrf_token', csrfToken);
+
+      try {
+        const response = await fetch('/api/profile/avatar', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to upload avatar');
+        }
+
+        // Optional: show a success toast here
+      } catch (error) {
+        console.error('Avatar upload failed:', error);
+        alert(error.message || 'Failed to upload avatar. Please try again.');
+        // Revert preview on failure
+        window.location.reload(); 
+      }
+    });
+  </script>
+</Layout>

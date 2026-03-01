@@ -14,11 +14,14 @@
     "db:start": "supabase db start"
   },
   "dependencies": {
+    "@astrojs/node": "^9.5.4",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^5.17.1",
     "daisyui": "^5.5.19",
     "drizzle-orm": "^0.45.1",
+    "nanoid": "^5.1.6",
     "postgres": "^3.4.8",
     "stripe": "^20.4.0"
   },

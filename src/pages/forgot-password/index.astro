@@ -1,0 +1,103 @@
+---
+import AuthLayout from '../../components/layout/AuthLayout.astro';
+import Alert from '../../components/ui/Alert.astro';
+import { getSupabaseServerClient } from '../../lib/supabase';
+import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+import { getSession } from '../../lib/server/auth';
+
+export const prerender = false;
+
+// Check if user is already authenticated
+const authResult = await getSession(Astro, { requireGuest: true });
+if (authResult instanceof Response) return authResult;
+
+let error = '';
+let success = false;
+
+// Handle form submission
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  
+  // Validate CSRF token
+  const csrfToken = formData.get('csrf_token') as string | null;
+  if (!validateCsrfToken(Astro.cookies, csrfToken)) {
+    error = 'Invalid request. Please try again.';
+  } else {
+    const email = formData.get('email') as string;
+
+    try {
+      const supabase = getSupabaseServerClient(Astro.cookies);
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${Astro.url.origin}/api/auth/callback?next=/update-password`,
+      });
+
+      if (resetError) {
+        console.error('Password reset error:', resetError);
+        // Don't leak whether the email exists or not for security
+        success = true;
+      } else {
+        success = true;
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      error = 'An unexpected error occurred';
+    }
+  }
+}
+---
+
+<AuthLayout 
+  title="Forgot Password - YouTube Community Portal"
+  heading="Reset your password"
+  subheading="Enter your email address and we'll send you a link to reset your password."
+>
+  <Fragment slot="icon">
+    <svg class="h-8 w-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+    </svg>
+  </Fragment>
+
+  <!-- Error Message -->
+  {error && <Alert type="error" message={error} />}
+
+  <!-- Success Message -->
+  {success ? (
+    <Alert type="success" message="If an account exists with that email, we have sent a password reset link. Please check your inbox.">
+      <div class="mt-4">
+        <a href="/login" class="text-sm font-medium text-primary hover:text-primary/80">
+          Return to login
+        </a>
+      </div>
+    </Alert>
+  ) : (
+    <form class="mt-8 space-y-6" method="POST">
+      <input type="hidden" name="csrf_token" value={getCsrfToken(Astro.cookies)} />
+      <div class="space-y-4">
+        <div>
+          <label for="email" class="label">Email address</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            class="input input-bordered w-full"
+            placeholder="Enter your email"
+          />
+        </div>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-primary w-full">
+          Send reset link
+        </button>
+      </div>
+      
+      <div class="text-center text-sm">
+        <a href="/login" class="font-medium text-base-content/70 hover:text-primary transition-colors">
+          Back to login
+        </a>
+      </div>
+    </form>
+  )}
+</AuthLayout>

@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import type { AstroCookies } from 'astro';
 // import type { Database } from './database.types'; // Will be generated after Supabase setup
 
 // Environment variables
@@ -9,8 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set');
 }
 
-// Create Supabase client (without types for now)
-// TODO: Add Database type after running: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts
+// Create Supabase client for client-side (browser)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -28,18 +29,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Helper function to create admin client (for server-side operations)
-export function createAdminClient() {
-  const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable must be set');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
+// Helper function to create server-side client (for Astro SSR)
+export function getSupabaseServerClient(cookies: AstroCookies) {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(key: string) {
+        return cookies.get(key)?.value;
+      },
+      set(key: string, value: string, options: CookieOptions) {
+        cookies.set(key, value, { ...options, path: '/' });
+      },
+      remove(key: string, options: CookieOptions) {
+        cookies.delete(key, { ...options, path: '/' });
+      },
     },
   });
 }

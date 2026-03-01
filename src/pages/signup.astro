@@ -1,0 +1,121 @@
+---
+import AuthLayout from '../components/layout/AuthLayout.astro';
+import Alert from '../components/ui/Alert.astro';
+import { getSupabaseServerClient } from '../lib/supabase';
+import { getCsrfToken, validateCsrfToken } from '../lib/server/csrf';
+import { getSession } from '../lib/server/auth';
+
+export const prerender = false;
+
+// Check if user is already authenticated
+const authResult = await getSession(Astro, { requireGuest: true });
+if (authResult instanceof Response) return authResult;
+
+let error = '';
+
+// Handle form submission
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  
+  // Validate CSRF token
+  const csrfToken = formData.get('csrf_token') as string | null;
+  if (!validateCsrfToken(Astro.cookies, csrfToken)) {
+    error = 'Invalid request. Please try again.';
+  } else {
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirm-password') as string;
+
+    if (password !== confirmPassword) {
+      error = 'Passwords do not match';
+    } else {
+      try {
+        const supabase = getSupabaseServerClient(Astro.cookies);
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${Astro.url.origin}/api/auth/callback`,
+          }
+        });
+
+        if (signUpError) {
+          console.error('Signup error:', signUpError);
+          error = signUpError.message;
+        } else {
+          // Redirect to a verification or login page
+          return Astro.redirect('/login?message=check_email');
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err);
+        error = 'An unexpected error occurred';
+      }
+    }
+  }
+}
+---
+
+<AuthLayout 
+  title="Sign Up - YouTube Community Portal"
+  heading="Create an account"
+>
+  <p slot="subheading-slot" class="mt-2 text-center text-sm text-base-content/70">
+    Or{' '}
+    <a href="/login" class="font-medium text-primary hover:text-primary/80">
+      sign in to your existing account
+    </a>
+  </p>
+
+  <!-- Error Message -->
+  {error && <Alert type="error" message={error} />}
+
+  <form class="mt-8 space-y-6" method="POST">
+    <input type="hidden" name="csrf_token" value={getCsrfToken(Astro.cookies)} />
+    <div class="space-y-4">
+      <div>
+        <label for="email" class="label">Email address</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+          class="input input-bordered w-full"
+          placeholder="Enter your email"
+        />
+      </div>
+      <div>
+        <label for="password" class="label">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="new-password"
+          required
+          class="input input-bordered w-full"
+          placeholder="Create a password"
+          minlength="6"
+        />
+      </div>
+      <div>
+        <label for="confirm-password" class="label">Confirm Password</label>
+        <input
+          id="confirm-password"
+          name="confirm-password"
+          type="password"
+          autocomplete="new-password"
+          required
+          class="input input-bordered w-full"
+          placeholder="Confirm your password"
+          minlength="6"
+        />
+      </div>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary w-full">
+        Sign up
+      </button>
+    </div>
+  </form>
+</AuthLayout>
