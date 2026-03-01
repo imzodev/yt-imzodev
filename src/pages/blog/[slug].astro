@@ -103,7 +103,7 @@ const formatDate = (dateString: string) => {
 <Layout title={`${post.title} - YouTube Community Portal`}>
   <Navbar />
   <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
-    <article class="max-w-4xl mx-auto space-y-8 bg-base-100 p-8 md:p-12 rounded-2xl shadow-xl">
+    <article class="max-w-5xl mx-auto space-y-8 bg-base-100 p-8 md:p-12 rounded-2xl shadow-xl">
       
       <!-- Breadcrumbs -->
       <div class="text-sm breadcrumbs text-base-content/70">
@@ -162,12 +162,12 @@ const formatDate = (dateString: string) => {
 
       <!-- Content -->
       {Content ? (
-        <div class="prose prose-lg md:prose-xl prose-base-content max-w-none">
+        <div class="prose prose-lg md:prose-xl prose-base-content max-w-none prose-headings:font-bold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-base-300">
           <Content />
         </div>
       ) : (
         <div 
-          class="prose prose-lg md:prose-xl prose-base-content max-w-none"
+          class="prose prose-lg md:prose-xl prose-base-content max-w-none prose-headings:font-bold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-base-300"
           set:html={contentHtml}
         />
       )}
