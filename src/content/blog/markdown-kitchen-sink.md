@@ -1,0 +1,93 @@
+---
+title: "Markdown Kitchen Sink: Testing Typography Styles"
+slug: "markdown-kitchen-sink"
+excerpt: "A comprehensive test post containing all common Markdown elements to verify our Tailwind typography styling."
+category: "testing"
+tags: ["markdown", "design", "typography"]
+status: "published"
+published_at: "2026-03-01T12:00:00Z"
+featured_image: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=2070&auto=format&fit=crop"
+---
+
+# Heading 1: The Quick Brown Fox Jumps Over The Lazy Dog
+
+This is a comprehensive test of our Markdown rendering capabilities using `@tailwindcss/typography`. We'll explore various elements to ensure everything looks gorgeous across light and dark themes.
+
+## Heading 2: Typography and Text Formatting
+
+Paragraphs are the building blocks of any blog post. They should have a comfortable line height and measure. This paragraph contains **bold text**, *italic text*, ***bold and italic text***, and ~~strikethrough text~~.
+
+You can also use `inline code` to reference variables like `const foo = 'bar'`, or add [links to other websites](https://imzodev.com) right in the middle of your sentences.
+
+### Heading 3: Lists and Enumerations
+
+Here is an unordered list:
+* First item
+* Second item
+  * Nested item A
+  * Nested item B
+* Third item
+
+And here is an ordered list:
+1. First step
+2. Second step
+   1. Sub-step A
+   2. Sub-step B
+3. Third step
+
+#### Heading 4: Blockquotes and Callouts
+
+Sometimes you need to quote someone famous or highlight a specific point:
+
+> "The best thing about a boolean is even if you are wrong, you are only off by a bit." 
+> — *Anonymous Programmer*
+
+## Visuals and Media
+
+Images should naturally scale to fit their containers and optionally include captions.
+
+![A beautiful workspace setup](https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=2072&auto=format&fit=crop)
+*A caption describing the image above.*
+
+## Data and Code
+
+### Tables
+
+Tables should be clearly structured with borders or striped rows.
+
+| Feature | Astro | Next.js | Remix |
+| :--- | :--- | :--- | :--- |
+| **Rendering** | SSG / SSR | SSR / SSG | SSR |
+| **Framework** | Agnostic | React | React |
+| **Learning Curve** | Low | Medium | Medium |
+
+### Code Blocks
+
+Code blocks should maintain their formatting and ideally have syntax highlighting if configured.
+
+```typescript
+// Example of a simple TypeScript function
+interface User {
+  id: number;
+  name: string;
+  role: 'admin' | 'user';
+}
+
+function greetUser(user: User): string {
+  if (user.role === 'admin') {
+    return `Welcome back, Admin ${user.name}!`;
+  }
+  return `Hello, ${user.name}.`;
+}
+
+const currentUser: User = { id: 1, name: "Imzodev", role: "admin" };
+console.log(greetUser(currentUser));
+```
+
+## Final Thoughts
+
+Markdown is incredibly powerful for content creation. With proper Tailwind typography classes (`prose`), you don't have to worry about writing custom CSS for every single HTML element.
+
+---
+
+*This horizontal rule separates the main content from the footer.*

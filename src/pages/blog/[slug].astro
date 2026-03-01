@@ -2,7 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.astro';
 import { supabase } from '../../lib/supabase';
-import { marked } from 'marked';
+import { Marked } from 'marked';
+import { codeToHtml } from 'shiki';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 
@@ -23,13 +24,55 @@ if (error || !post || post.status !== 'published') {
   return Astro.redirect('/404');
 }
 
-// Convert markdown to HTML securely
+// Convert markdown to HTML securely with syntax highlighting
 let contentHtml = '';
 try {
+  const marked = new Marked({ async: true });
+  
+  marked.use({
+    walkTokens: async (token) => {
+      if (token.type === 'code') {
+        try {
+          const highlighted = await codeToHtml(token.text, {
+            lang: token.lang || 'text',
+            theme: 'github-dark'
+          });
+          
+          token.type = 'html';
+          token.text = `
+            <div class="relative group bg-[#0d1117] rounded-xl overflow-hidden my-6 not-prose">
+              <div class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  class="copy-btn btn btn-sm btn-square btn-neutral border border-base-300 shadow-sm bg-base-100 text-base-content"
+                  data-code="${token.text.replace(/"/g, '&quot;')}"
+                  title="Copy code"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="overflow-x-auto text-sm p-4 custom-scrollbar shiki-container">
+                ${highlighted}
+              </div>
+            </div>
+          `;
+        } catch (e) {
+          console.error("Failed to highlight code block", e);
+        }
+      }
+    }
+  });
+
   const rawHtml = await marked.parse(post.content || '');
   const window = new JSDOM('').window;
   const purify = DOMPurify(window);
-  contentHtml = purify.sanitize(rawHtml);
+  
+  // Allow the custom HTML we added for the code blocks
+  contentHtml = purify.sanitize(rawHtml, {
+    ADD_TAGS: ['svg', 'path', 'button'],
+    ADD_ATTR: ['stroke-linecap', 'stroke-linejoin', 'stroke-width', 'stroke', 'fill', 'viewBox', 'd', 'data-code']
+  });
 } catch (e) {
   console.error("Error rendering markdown:", e);
   contentHtml = "<p>Error rendering content.</p>";
@@ -124,3 +167,61 @@ const formatDate = (dateString: string) => {
     </article>
   </main>
 </Layout>
+
+<script>
+  // Copy to clipboard functionality
+  document.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('.copy-btn');
+    if (!btn) return;
+    
+    const code = btn.getAttribute('data-code');
+    if (!code) return;
+    
+    try {
+      await navigator.clipboard.writeText(code);
+      
+      // Show success state
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `
+        <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      `;
+      
+      setTimeout(() => {
+        btn.innerHTML = originalHtml;
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  });
+</script>
+
+<style is:global>
+  /* Customizing the Shiki output to fit nicely */
+  .shiki-container pre {
+    background-color: transparent !important;
+    margin: 0;
+    padding: 0;
+  }
+  .shiki-container code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    line-height: 1.5;
+  }
+  
+  /* Custom scrollbar for the code block */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+</style>
