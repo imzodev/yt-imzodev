@@ -76,7 +76,7 @@ const currentPath = Astro.url.pathname;
 
 <script>
   // Setup theme toggle logic
-  const themeToggle = document.getElementById('theme-toggle');
+  const themeToggle = document.getElementById('theme-toggle') as HTMLInputElement | null;
   
   // Initialize theme based on localStorage or system preference
   const initTheme = () => {
@@ -93,9 +93,10 @@ const currentPath = Astro.url.pathname;
   
   // Handle toggle change
   themeToggle?.addEventListener('change', (e) => {
-    if (!e.target) return;
-    
-    const isLight = e.target.checked;
+    const target = e.target as HTMLInputElement | null;
+    if (!target) return;
+
+    const isLight = target.checked;
     const theme = isLight ? 'light' : 'dark';
     
     // Apply theme to document element (DaisyUI looks for data-theme on html)
