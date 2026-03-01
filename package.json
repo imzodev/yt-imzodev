@@ -19,6 +19,7 @@
     "sync": "bun run sync:blog && bun run sync:snippets"
   },
   "dependencies": {
+    "@astrojs/mdx": "^4.3.13",
     "@astrojs/node": "^9.5.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
