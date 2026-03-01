@@ -1,4 +1,4 @@
-import type { AstroCookies, AstroGlobal } from 'astro';
+import type { AstroGlobal } from 'astro';
 import { getSupabaseServerClient } from '../supabase';
 
 /**
