@@ -38,6 +38,13 @@ Content management system for the YouTube Community Portal, including video cata
 - [ ] **Content Recommendations** - Related content suggestions (Postponed)
 - [ ] **Popular Content** - Trending videos/articles/snippets (Postponed)
 
+### 🛠️ Local Content Management (Admin Sync)
+To allow the admin to persist content directly in the repository via Markdown/MDX:
+- `src/content/blog/`: Store blog posts here.
+- `src/content/snippets/`: Store code snippets here.
+- `scripts/sync-blog.ts` & `scripts/sync-snippets.ts`: Read frontmatter/markdown and upsert directly into the Supabase database.
+- `bun run sync`: Command to run all content syncs.
+
 ---
 
 ## 🛠️ Technical Implementation

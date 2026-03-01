@@ -4,14 +4,19 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "start": "astro dev",
+    "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "db:generate": "drizzle-kit generate",
+    "db:push": "npx tsx supabase/migrations/run-migration.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:types": "./scripts/generate-types.sh",
     "db:reset": "supabase db reset",
-    "db:start": "supabase db start"
+    "db:start": "supabase db start",
+    "sync:blog": "bun run scripts/sync-blog.ts",
+    "sync:snippets": "bun run scripts/sync-snippets.ts",
+    "sync": "bun run sync:blog && bun run sync:snippets"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.4",
@@ -24,7 +29,9 @@
     "astro": "^5.17.1",
     "daisyui": "^5.5.19",
     "dompurify": "^3.3.1",
+    "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
+    "gray-matter": "^4.0.3",
     "jsdom": "^28.1.0",
     "marked": "^17.0.3",
     "nanoid": "^5.1.6",
