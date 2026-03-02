@@ -82,33 +82,33 @@ Perfect for highlighting a sequence or steps in a process. Think of it like a pr
 ### The Prompt
 
 ```
-Crea un componente React con TypeScript y TailwindCSS para Next.js (con 'use client') llamado StepSequence.
+Create a React component with TypeScript and TailwindCSS for Next.js (with 'use client') called StepSequence.
 
-Visual: Secuencia horizontal de pasos con línea de conexión que se ilumina progresivamente. Nodos circulares 52px con iconos SVG en el centro.
+Visual: Horizontal sequence of steps with a connecting line that illuminates progressively. Circular nodes 52px with SVG icons in the center.
 
-Datos: Array configurable { id, label, iconPath (string SVG path d) }.
+Data: Configurable array { id, label, iconPath (string SVG path d) }.
 
-Animación secuencial infinita: Usa useState currentStep y setInterval (2000ms). Avanza paso a paso, al completar todos reinicia a 0.
+Infinite sequential animation: Use useState currentStep and setInterval (2000ms). Advance step by step, when complete all restart to 0.
 
-Elementos SVG:
-- Fondo cuadriculado con pattern 40x40px
-- Línea base gris oscuro (#262626) 4px de ancho, full width entre primer y último nodo
-- Línea activa con gradiente linear (sky-500 a fuchsia-500) 6px, strokeLinecap round, con filtro glow
-- Filtros SVG: neonGlow (stdDeviation 6), neonLineGlow (stdDeviation 4) usando feGaussianBlur/feMerge
+SVG Elements:
+- Grid background with pattern 40x40px
+- Base line dark gray (#262626) 4px width, full width between first and last node
+- Active line with linear gradient (sky-500 to fuchsia-500) 6px, strokeLinecap round, with glow filter
+- SVG Filters: neonGlow (stdDeviation 6), neonLineGlow (stdDeviation 4) using feGaussianBlur/feMerge
 
-Nodos:
-- Círculo 26px radio, fill fondo, stroke neón si activo (#0ea5e9 para primera mitad, #d946ef para segunda)
-- Icono 24x24px centrado, path con stroke blanco si activo, gris si inactivo, strokeWidth 2
-- Escala 1.1x en el paso actual con CSS transform
-- Etiqueta debajo del nodo, 60px abajo, texto blanco con textShadow glow si activo
+Nodes:
+- Circle 26px radius, fill background, neon stroke if active (#0ea5e9 for first half, #d946ef for second)
+- Icon 24x24px centered, path with white stroke if active, gray if inactive, strokeWidth 2
+- Scale 1.1x on current step with CSS transform
+- Label below node, 60px down, white text with textShadow glow if active
 
-Layout: 800x250px, padding 100px lateral, stepDistance calculado equidistante.
+Layout: 800x250px, padding 100px lateral, stepDistance calculated equidistant.
 
-Todo 100% SVG puro, sin librerías externas.
+All 100% pure SVG, no external libraries.
 
-El fondo debe ser oscuro cuadriculado
+The background should be dark with grid
 
-Integra esto dentro de la actual aplicacion.
+Integrate this within the current application.
 ```
 
 ### What It Creates
@@ -137,18 +137,18 @@ Animated charts grab attention. Perfect for presentations and data visualization
 ### The Prompt
 
 ```
-Crea un componente de React (para Next.js con 'use client', TypeScript y TailwindCSS) que sea una gráfica de barras construida 100% con SVG puro.
+Create a React component (for Next.js with 'use client', TypeScript and TailwindCSS) that is a bar chart built 100% with pure SVG.
 
-Requisitos exactos:
-1. Visuales: Fondo oscuro con una cuadrícula (usando `<pattern>` SVG). Ejes y barras con efecto de resplandor neón (usando `<filter>` y `feGaussianBlur`). Usa colores neón cíclicos (cyan, fuchsia, lime, yellow, sky).
-2. Datos configurables: Acepta un prop `data` tipo `[{label: string, value: number}]`.
-3. Animación Secuencial e Infinita: Usa un estado `currentStep` controlado por un `setInterval` para revelar las barras una por una. Al terminar todas las barras, reinicia el ciclo a -1.
-4. Efecto de Rebote: No uses @keyframes. Anima las barras pasando un objeto `style` al `<rect>` que modifique `height` y `y` usando `transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1.2)`.
-5. Detalles: Muestra el `value` de cada barra flotando encima de ella una vez que aparece, usando también transiciones de opacidad y transform.
+Exact requirements:
+1. Visuals: Dark background with a grid (using `<pattern>` SVG). Axes and bars with neon glow effect (using `<filter>` and `feGaussianBlur`). Use cyclic neon colors (cyan, fuchsia, lime, yellow, sky).
+2. Configurable data: Accepts a prop `data` type `[{label: string, value: number}]`.
+3. Sequential and Infinite Animation: Use a `currentStep` state controlled by a `setInterval` to reveal bars one by one. When all bars are finished, restart the cycle to -1.
+4. Bounce Effect: Do not use @keyframes. Animate the bars by passing a `style` object to `<rect>` that modifies `height` and `y` using `transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1.2)`.
+5. Details: Show the `value` of each bar floating above it once it appears, also using opacity and transform transitions.
 
-El fondo debe ser oscuro cuadriculado
+The background should be dark with grid
 
-Integra esto dentro de la actual aplicacion.
+Integrate this within the current application.
 ```
 
 ### What It Creates
@@ -185,28 +185,28 @@ Great for showing layers, stacks, or hierarchical data with depth.
 ### The Prompt
 
 ```
-Crea un componente React con TypeScript y TailwindCSS para Next.js (con 'use client') llamado StackedLayers.
+Create a React component with TypeScript and TailwindCSS for Next.js (with 'use client') called StackedLayers.
 
-Visual: Bloques 3D isométricos apilados verticalmente con perspectiva SVG. Cada bloque tiene cara superior, frontal y lateral derecha. Fondo oscuro (#0d1117) con rejilla sutil. Resplandor neón mediante filtros SVG feGaussianBlur/feMerge.
+Visual: 3D isometric blocks stacked vertically with SVG perspective. Each block has top, front, and right face. Dark background (#0d1117) with subtle grid. Neon glow via SVG filters feGaussianBlur/feMerge.
 
-Datos: Array configurable { id, number (ej "01"), label, description, color (hex neón), sideColor (versión oscura) }.
+Data: Configurable array { id, number (e.g. "01"), label, description, color (hex neon), sideColor (darker version) }.
 
-Animación secuencial infinita: Usa useState currentStep y setInterval (1200ms). Revela capas de abajo hacia arriba (índice 0 primero). Al completar todas + 2 pasos extra, reinicia a -1.
+Infinite sequential animation: Use useState currentStep and setInterval (1200ms). Reveal layers from bottom to top (index 0 first). When complete all + 2 extra steps, restart to -1.
 
-Espaciado: 90px entre capas para evitar superposición de textos. Capas: 260px ancho, 30px alto, 40px profundidad 3D.
+Spacing: 90px between layers to avoid text overlap. Layers: 260px width, 30px height, 40px 3D depth.
 
-Info por capa (alterna izquierda/derecha):
-- Número grande 42px en color neón con filtro glow
-- Badge rectángulo redondeado 140x22 con label centrado 11px bold
-- Descripción 2 líneas usando SVG tspan, 10px, color gris
-- 3 puntos decorativos al final
-- Línea conectora desde bloque hacia la info con círculo terminal
+Info per layer (alternating left/right):
+- Large number 42px in neon color with glow filter
+- Rounded badge rectangle 140x22 with label centered 11px bold
+- Description 2 lines using SVG tspan, 10px, gray color
+- 3 decorative dots at the end
+- Connector line from block to info with circular terminal
 
-Todo 100% SVG puro, sin librerías externas.
+All 100% pure SVG, no external libraries.
 
-El fondo debe ser oscuro cuadriculado
+The background should be dark with grid
 
-Integra esto dentro de la actual aplicacion.
+Integrate this within the current application.
 ```
 
 ### What It Creates
@@ -235,23 +235,23 @@ Perfect for showing methodologies like Scrum, continuous improvement, or any cyc
 ### The Prompt
 
 ```
-Crea un componente React (use client) con TypeScript y Tailwind llamado InfiniteProcessLoop.
+Create a React component (use client) with TypeScript and Tailwind called InfiniteProcessLoop.
 
-Visual: Un ciclo circular de bloques 3D isométricos dispuestos en un anillo (perspectiva SVG). Cada bloque debe tener profundidad (cara superior, frontal y lateral) con estética neón y filtros de resplandor (feGaussianBlur). Fondo oscuro (#0d1117) con rejilla sutil.
+Visual: A circular cycle of 3D isometric blocks arranged in a ring (SVG perspective). Each block must have depth (top, front, and lateral face) with neon aesthetic and glow filters (feGaussianBlur). Dark background (#0d1117) with subtle grid.
 
-Datos: Array configurable de objetos { id, label, description, color, icon }. Por defecto, usa 4 fases genéricas: "Entrada", "Procesamiento", "Optimización" y "Salida".
+Data: Configurable array of objects { id, label, description, color, icon }. By default, use 4 generic phases: "Input", "Processing", "Optimization", and "Output".
 
-Animación de Ciclo: Usa un setInterval para resaltar cada bloque secuencialmente. La animación debe ser un flujo infinito: una línea de energía neón debe recorrer el círculo conectando los bloques, iluminándose intensamente cuando el proceso pasa por cada fase.
+Cycle Animation: Use a setInterval to highlight each block sequentially. The animation must be an infinite flow: a neon energy line must travel around the circle connecting the blocks, illuminating intensely when the process passes through each phase.
 
-Info Dinámica: Al activarse una fase, muestra el texto (Label y Descripción) flotando cerca del bloque con un efecto de "fade-in". Alterna la posición de la info para que no se amontone.
+Dynamic Info: When a phase activates, show the text (Label and Description) floating near the block with a "fade-in" effect. Alternate the position of the info so it doesn't stack.
 
-Especificaciones:
-- 100% SVG puro, sin librerías externas.
-- Estilo de líneas conectoras con terminales circulares.
-- Los bloques deben tener una transición suave de color (de apagado a neón brillante) al ser seleccionados.
-- El fondo debe ser oscuro cuadriculado
+Specifications:
+- 100% pure SVG, no external libraries.
+- Connector line style with circular terminals.
+- Blocks must have a smooth color transition (from off to bright neon) when selected.
+- The background should be dark with grid
 
-Integra esto dentro de la actual aplicacion.
+Integrate this within the current application.
 ```
 
 ### What It Creates
