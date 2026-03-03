@@ -1,6 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
+import VideoCard from '../components/video/VideoCard.astro';
+import { supabase } from '../lib/supabase';
+
+// Fetch latest videos (limit to 3 for homepage)
+const { data: latestVideos } = await supabase
+  .from('videos')
+  .select(`
+    *,
+    category:video_categories(name, slug)
+  `)
+  .eq('is_active', true)
+  .order('published_at', { ascending: false })
+  .limit(3);
 ---
 
 <Layout title="imzodev - AI & Software Development">
@@ -18,7 +31,7 @@ import Navbar from '../components/Navbar.astro';
             Development
           </h1>
           <p class="text-base-content/70 text-lg mb-8 max-w-lg">
-            Deep-dive into AI and software insights from the frontier of coding, neural networks, and scalable architecture.
+            Deep-dive into AI and software insights from frontier of coding, neural networks, and scalable architecture.
           </p>
           <div class="flex gap-4">
             <a href="#videos" class="btn btn-primary gap-2">
@@ -44,86 +57,39 @@ import Navbar from '../components/Navbar.astro';
       </div>
     </div>
 
-    <!-- Trending Tutorials Section -->
-    <div class="container mx-auto px-4 py-16">
+    <!-- Latest Videos Section -->
+    <div id="videos" class="container mx-auto px-4 py-16">
       <div class="flex justify-between items-center mb-8">
         <div>
-          <h2 class="text-3xl font-bold text-base-content">Trending Tutorials</h2>
-          <p class="text-base-content/70 mt-2">Master the most sought-after topics this week</p>
+          <h2 class="text-3xl font-bold text-base-content">Latest Videos</h2>
+          <p class="text-base-content/70 mt-2">Fresh tutorials, insights, and tech updates</p>
         </div>
-        <a href="/tutorials" class="text-primary hover:underline">View All →</a>
+        <a href="/videos" class="text-primary hover:underline">View All →</a>
       </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all border border-primary/10">
-          <figure class="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 relative overflow-hidden">
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-20 h-20 text-base-content/20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </div>
-            <div class="absolute bottom-2 right-2 badge badge-sm">12:45</div>
-          </figure>
-          <div class="card-body">
-            <h3 class="card-title text-base-content text-lg">Building a GPT-4 Powered SaaS</h3>
-            <p class="text-base-content/70 text-sm">Learn how to integrate LLMs into your production-ready SaaS platform.</p>
-            <div class="flex items-center gap-2 mt-2">
-              <div class="avatar placeholder">
-                <div class="bg-primary text-primary-content rounded-full w-6">
-                  <span class="text-xs">I</span>
-                </div>
-              </div>
-              <span class="text-xs text-base-content/60">imzodev</span>
-            </div>
-          </div>
-        </div>
 
-        <div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all border border-primary/10">
-          <figure class="aspect-video bg-gradient-to-br from-secondary/20 to-accent/20 relative overflow-hidden">
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-20 h-20 text-base-content/20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </div>
-            <div class="absolute bottom-2 right-2 badge badge-sm">18:32</div>
-          </figure>
-          <div class="card-body">
-            <h3 class="card-title text-base-content text-lg">Neural Networks from Scratch</h3>
-            <p class="text-base-content/70 text-sm">We dive into math, code, and intuition to build a CNN from scratch.</p>
-            <div class="flex items-center gap-2 mt-2">
-              <div class="avatar placeholder">
-                <div class="bg-primary text-primary-content rounded-full w-6">
-                  <span class="text-xs">I</span>
-                </div>
-              </div>
-              <span class="text-xs text-base-content/60">imzodev</span>
-            </div>
-          </div>
+      {latestVideos && latestVideos.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {latestVideos.map((video) => (
+            <VideoCard video={video} />
+          ))}
         </div>
-
-        <div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all border border-primary/10">
-          <figure class="aspect-video bg-gradient-to-br from-accent/20 to-primary/20 relative overflow-hidden">
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-20 h-20 text-base-content/20" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </div>
-            <div class="absolute bottom-2 right-2 badge badge-sm">25:18</div>
-          </figure>
-          <div class="card-body">
-            <h3 class="card-title text-base-content text-lg">Next.js 14 App Router Deep Dive</h3>
-            <p class="text-base-content/70 text-sm">Everything you need to know about Next.js App Router, Suspense, and more.</p>
-            <div class="flex items-center gap-2 mt-2">
-              <div class="avatar placeholder">
-                <div class="bg-primary text-primary-content rounded-full w-6">
-                  <span class="text-xs">I</span>
-                </div>
-              </div>
-              <span class="text-xs text-base-content/60">imzodev</span>
-            </div>
-          </div>
+      ) : (
+        <div class="bg-base-200 rounded-lg p-12 text-center">
+          <svg class="mx-auto h-16 w-16 text-base-content/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+          <h3 class="text-xl font-semibold text-base-content mb-2">No videos yet</h3>
+          <p class="text-base-content/70 max-w-md mx-auto">
+            Videos from <a href="https://youtube.com/@imzodev" target="_blank" class="text-primary hover:underline">@imzodev</a> will appear here once synced to the database.
+          </p>
+          <a href="https://youtube.com/@imzodev" target="_blank" class="btn btn-primary mt-6">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505a3.017 3.017 0 0 0-2.122 2.136C.242 8.273 0 8.273 0 12s.242 3.727.505 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24.002 15.727 24.244 12 24.244 12s-.242-3.727-.505-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            Visit YouTube Channel
+          </a>
         </div>
-      </div>
+      )}
     </div>
 
     <!-- Deep-Dive Guides Section -->
@@ -249,7 +215,7 @@ import Navbar from '../components/Navbar.astro';
     <div class="bg-base-200 py-16">
       <div class="container mx-auto px-4">
         <div class="max-w-2xl mx-auto text-center">
-          <h2 class="text-3xl font-bold text-base-content mb-4">Stay ahead of the curve</h2>
+          <h2 class="text-3xl font-bold text-base-content mb-4">Stay ahead of curve</h2>
           <p class="text-base-content/70 mb-8">
             Join 50,000+ developers getting weekly tutorials, tips, and insights on AI, software, and tech trends.
           </p>
