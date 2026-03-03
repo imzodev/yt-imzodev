@@ -1,0 +1,517 @@
+---
+title: "Gemini 3.1 PRO + Antigravity: Creating Animated SVG Infographics Made Super Easy"
+slug: "gemini-31-pro-antigravity-svg-animations"
+excerpt: "Learn how to leverage Google's Gemini 3.1 PRO AI with Antigravity IDE to create stunning animated SVG infographics for presentations and videos. This powerful combination transforms complex animation work into simple AI-assisted workflows."
+category: "web-development"
+tags: ["gemini", "svg", "animations", "ai", "nextjs", "antigravity"]
+status: "published"
+published_at: "2026-03-02T17:00:00Z"
+featured_image: "https://i.ytimg.com/vi/MOMAJ-HUMLU/maxresdefault.jpg"
+video_id: MOMAJ-HUMLU
+---
+
+# Gemini 3.1 PRO + Antigravity: Creating Animated SVG Infographics Made Super Easy
+
+Creating animated SVG infographics has always been powerful but complex. Between path manipulation, timing functions, and browser compatibility, they can quickly become a headache. But what if you could generate stunning animated SVG infographics with just natural language prompts?
+
+Enter the dream team: **Gemini 3.1 PRO** + **Antigravity**.
+
+## What is Antigravity?
+
+Antigravity is Google's new AI-powered IDE designed for agentic workflows. It's specifically optimized for Gemini 3 models with "Deep Think" mode and auto-configuring capabilities.
+
+Think of it as the next generation of development tools — where AI doesn't just assist, but actively generates and validates code.
+
+## What Makes Gemini 3.1 PRO Special for SVG Animations?
+
+Gemini 3.1 PRO was trained to excel at:
+
+- **Code generation** with context awareness for complex SVG structures
+- **Visual reasoning** to understand and create path data, gradients, and filters
+- **Multi-step problem solving** for animation sequences and timing
+- **Real-time validation** to ensure generated code actually works
+
+**Fun fact:** Gemini 3.1 PRO was literally trained to generate pelicans riding bicycles. Yes, really. And the results are impressive.
+
+## Why Combine Them?
+
+The magic happens when you let Gemini handle the creative and logical heavy lifting, while Antigravity manages the development environment:
+
+1. **Describe your vision** → Gemini generates pure SVG + React components
+2. **Antigravity validates** → Checks that the code actually works
+3. **Review and integrate** → Copy the components into your project
+4. **Customize and deploy** → Configure data, styling, and behavior
+
+## Getting Started
+
+### 1. Install Antigravity
+
+Antigravity is available for macOS, Windows, and Linux. Head to the [official download page](https://antigravity.google/download).
+
+### 2. Create a Next.js Project
+
+```bash
+# Navigate to your project folder
+cd your-project-folder
+
+# Create a new Next.js app
+npx create-next-app@latest svg-animate --typescript --tailwind --app
+
+# Navigate into the project
+cd svg-animate
+
+# Install dependencies and start dev server
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 in your browser to see your new Next.js project.
+
+### 3. Use Gemini 3.1 PRO in Antigravity
+
+Open Antigravity and start a new chat. Make sure you're using **Gemini 3.1 PRO High** for the best results.
+
+Now you're ready to generate animated SVG components!
+
+---
+
+## Component 1: Step Sequence — Animated Progress Bar
+
+Perfect for highlighting a sequence or steps in a process. Think of it like a progress indicator that tells a story.
+
+### The Prompt
+
+```
+Create a React component with TypeScript and TailwindCSS for Next.js (with 'use client') called StepSequence.
+
+Visual: Horizontal sequence of steps with a connecting line that illuminates progressively. Circular nodes 52px with SVG icons in the center.
+
+Data: Configurable array { id, label, iconPath (string SVG path d) }.
+
+Infinite sequential animation: Use useState currentStep and setInterval (2000ms). Advance step by step, when complete all restart to 0.
+
+SVG Elements:
+- Grid background with pattern 40x40px
+- Base line dark gray (#262626) 4px width, full width between first and last node
+- Active line with linear gradient (sky-500 to fuchsia-500) 6px, strokeLinecap round, with glow filter
+- SVG Filters: neonGlow (stdDeviation 6), neonLineGlow (stdDeviation 4) using feGaussianBlur/feMerge
+
+Nodes:
+- Circle 26px radius, fill background, neon stroke if active (#0ea5e9 for first half, #d946ef for second)
+- Icon 24x24px centered, path with white stroke if active, gray if inactive, strokeWidth 2
+- Scale 1.1x on current step with CSS transform
+- Label below node, 60px down, white text with textShadow glow if active
+
+Layout: 800x250px, padding 100px lateral, stepDistance calculated equidistant.
+
+All 100% pure SVG, no external libraries.
+
+The background should be dark with grid
+
+Integrate this within the current application.
+```
+
+### What It Creates
+
+A horizontal progress bar with:
+- Animated connection line that illuminates progressively
+- Circular nodes with icons
+- Infinite loop (steps repeat automatically)
+- Neon glow effects using SVG filters
+- Fully configurable data array
+
+### Key Features
+
+- **Grid background** using SVG `<pattern>`
+- **Neon glow filters** with `feGaussianBlur` and `feMerge`
+- **Sequential animation** controlled by `setInterval` (2000ms per step)
+- **Active state styling** — current step is 1.1x scaled with neon stroke
+- **Labels with text-shadow glow** for better visibility
+
+---
+
+## Component 2: Bar Chart — Animated with Bounce Effect
+
+Animated charts grab attention. Perfect for presentations and data visualization.
+
+### The Prompt
+
+```
+Create a React component (for Next.js with 'use client', TypeScript and TailwindCSS) that is a bar chart built 100% with pure SVG.
+
+Exact requirements:
+1. Visuals: Dark background with a grid (using `<pattern>` SVG). Axes and bars with neon glow effect (using `<filter>` and `feGaussianBlur`). Use cyclic neon colors (cyan, fuchsia, lime, yellow, sky).
+2. Configurable data: Accepts a prop `data` type `[{label: string, value: number}]`.
+3. Sequential and Infinite Animation: Use a `currentStep` state controlled by a `setInterval` to reveal bars one by one. When all bars are finished, restart the cycle to -1.
+4. Bounce Effect: Do not use @keyframes. Animate the bars by passing a `style` object to `<rect>` that modifies `height` and `y` using `transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1.2)`.
+5. Details: Show the `value` of each bar floating above it once it appears, also using opacity and transform transitions.
+
+The background should be dark with grid
+
+Integrate this within the current application.
+```
+
+### What It Creates
+
+An animated bar chart with:
+- Natural bounce effect when bars appear
+- Sequential reveal animation
+- Values displayed above each bar
+- Infinite loop (bars repeat automatically)
+- Neon color scheme
+
+### Key Features
+
+- **Bounce animation** using CSS transitions, not `@keyframes`
+- **Sequential reveal** — bars appear one by one
+- **Floating value labels** with fade-in transitions
+- **Neon glow filters** for visual impact
+- **Fully configurable data** — pass any `[{label, value}]` array
+
+### The Bounce Easing
+
+```css
+transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+```
+
+This creates a satisfying overshoot-and-settle effect — perfect for grabbing attention.
+
+---
+
+## Component 3: Stacked Layers — 3D Isometric Blocks
+
+Great for showing layers, stacks, or hierarchical data with depth.
+
+### The Prompt
+
+```
+Create a React component with TypeScript and TailwindCSS for Next.js (with 'use client') called StackedLayers.
+
+Visual: 3D isometric blocks stacked vertically with SVG perspective. Each block has top, front, and right face. Dark background (#0d1117) with subtle grid. Neon glow via SVG filters feGaussianBlur/feMerge.
+
+Data: Configurable array { id, number (e.g. "01"), label, description, color (hex neon), sideColor (darker version) }.
+
+Infinite sequential animation: Use useState currentStep and setInterval (1200ms). Reveal layers from bottom to top (index 0 first). When complete all + 2 extra steps, restart to -1.
+
+Spacing: 90px between layers to avoid text overlap. Layers: 260px width, 30px height, 40px 3D depth.
+
+Info per layer (alternating left/right):
+- Large number 42px in neon color with glow filter
+- Rounded badge rectangle 140x22 with label centered 11px bold
+- Description 2 lines using SVG tspan, 10px, gray color
+- 3 decorative dots at the end
+- Connector line from block to info with circular terminal
+
+All 100% pure SVG, no external libraries.
+
+The background should be dark with grid
+
+Integrate this within the current application.
+```
+
+### What It Creates
+
+Stacked 3D isometric blocks with:
+- Perspective depth (top, front, and right faces)
+- Sequential reveal from bottom to top
+- Info panels alternating left/right
+- Connecting lines with circular terminals
+- Neon color transitions (off to glowing)
+
+### Key Features
+
+- **3D isometric perspective** using pure SVG paths
+- **Alternating info panels** to avoid text overlap
+- **Smooth color transitions** when layers activate
+- **90px spacing** between layers for readability
+- **Decorative elements** — badges, dots, connector lines
+
+---
+
+## Component 4: Infinite Process Loop — Circular Cycle
+
+Perfect for showing methodologies like Scrum, continuous improvement, or any cyclical process.
+
+### The Prompt
+
+```
+Create a React component (use client) with TypeScript and Tailwind called InfiniteProcessLoop.
+
+Visual: A circular cycle of 3D isometric blocks arranged in a ring (SVG perspective). Each block must have depth (top, front, and lateral face) with neon aesthetic and glow filters (feGaussianBlur). Dark background (#0d1117) with subtle grid.
+
+Data: Configurable array of objects { id, label, description, color, icon }. By default, use 4 generic phases: "Input", "Processing", "Optimization", and "Output".
+
+Cycle Animation: Use a setInterval to highlight each block sequentially. The animation must be an infinite flow: a neon energy line must travel around the circle connecting the blocks, illuminating intensely when the process passes through each phase.
+
+Dynamic Info: When a phase activates, show the text (Label and Description) floating near the block with a "fade-in" effect. Alternate the position of the info so it doesn't stack.
+
+Specifications:
+- 100% pure SVG, no external libraries.
+- Connector line style with circular terminals.
+- Blocks must have a smooth color transition (from off to bright neon) when selected.
+- The background should be dark with grid
+
+Integrate this within the current application.
+```
+
+### What It Creates
+
+A circular process cycle with:
+- 4 default phases: Input → Processing → Optimization → Output
+- Energy line flowing around the circle
+- Blocks illuminate intensely when process passes through
+- Floating info panels with fade-in effect
+- Alternating positions to avoid overlap
+
+### Key Features
+
+- **Circular energy flow** — neon line travels between blocks
+- **Sequential highlighting** — each phase lights up in turn
+- **Dynamic info panels** — fade in near active block
+- **Infinite loop** — cycle repeats automatically
+- **3D isometric blocks** with depth and neon glow
+
+---
+
+## Component 5: Pelican on a Bicycle — Inverse Kinematics
+
+The fun one! Shows how capable Gemini 3.1 PRO is at generating complex SVG animations.
+
+### The Prompt
+
+```
+Genera un SBG animado de un pelícano usando una bicicleta
+```
+
+Yes, that's the entire prompt. Just one line. And look at the result:
+
+### What It Creates
+
+A pelican pedaling a bicycle with:
+- Full character animation (legs, wings, body movement)
+- Bicyclic motion (wheels, pedals)
+- **Inverse Kinematics (IK)** for natural joint movement
+- Pure SVG with `requestAnimationFrame` for smooth animation
+- **Generated from a single sentence prompt**
+
+### Why This Is Impressive
+
+This demonstrates Gemini 3.1 PRO's ability to:
+- Understand complex visual concepts (pelican + bicycle)
+- Generate coherent character animation
+- Implement inverse kinematics for natural motion
+- Create multiple moving parts working together
+
+**Gemini 3.1 PRO was literally trained to generate pelicans riding bicycles.** The results speak for themselves.
+
+---
+
+## Common Patterns Across All Components
+
+### Pure SVG, No External Libraries
+
+Every component uses:
+- Native SVG elements: `<svg>`, `<path>`, `<circle>`, `<rect>`, `<pattern>`
+- CSS transitions and transforms
+- SVG filters: `<filter>`, `feGaussianBlur>`, `feMerge>`
+- **NO** Framer Motion, **NO** GSAP, **NO** external animation libraries
+
+### Neon Glow Effects
+
+All components use this pattern:
+
+```xml
+<defs>
+  <filter id="neonGlow">
+    <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+    <feMerge>
+      <feMergeNode in="coloredBlur" />
+      <feMergeNode in="SourceGraphic" />
+    </feMerge>
+  </filter>
+</defs>
+```
+
+Apply with: `filter="url(#neonGlow)"`
+
+### Grid Background Pattern
+
+```xml
+<defs>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a1a1a" stroke-width="1" />
+  </pattern>
+</defs>
+```
+
+Apply with: `<rect fill="url(#grid)" />`
+
+### Sequential Animation Pattern
+
+All components use this pattern:
+
+```typescript
+const [currentStep, setCurrentStep] = useState(0);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setCurrentStep(prev => (prev + 1) % totalSteps);
+  }, 1200); // 1200ms per step
+
+  return () => clearInterval(interval);
+}, []);
+```
+
+---
+
+## Integration Example
+
+Here's how to use these components in your Next.js app:
+
+```typescript
+// app/page.tsx
+import StepSequence from '@/components/StepSequence';
+import BarChart from '@/components/BarChart';
+import StackedLayers from '@/components/StackedLayers';
+import InfiniteProcessLoop from '@/components/InfiniteProcessLoop';
+import PelicanBicycle from '@/components/PelicanBicycle';
+
+export default function Home() {
+  return (
+    <main className="min-h-screen bg-[#0d1117]">
+      <section className="py-12 px-4">
+        <h1 className="text-4xl font-bold text-white mb-8">
+          Animated SVG Components
+        </h1>
+
+        {/* Step Sequence */}
+        <StepSequence
+          data={[
+            { id: 1, label: 'Initialize', iconPath: 'M12 2L2 7l10 5 10-5-10 5z' },
+            { id: 2, label: 'Process', iconPath: 'M13 10V3L4 14h7v7l9-11h-7z' },
+            { id: 3, label: 'Validate', iconPath: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' },
+            { id: 4, label: 'Complete', iconPath: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L18 8l-8 9z' },
+          ]}
+        />
+
+        {/* Bar Chart */}
+        <BarChart
+          data={[
+            { label: 'React', value: 85 },
+            { label: 'Vue', value: 72 },
+            { label: 'Svelte', value: 68 },
+            { label: 'Astro', value: 91 },
+          ]}
+        />
+
+        {/* Stacked Layers */}
+        <StackedLayers
+          data={[
+            { id: '01', label: 'Layer 1', description: 'Frontend layer', color: '#06b6d4' },
+            { id: '02', label: 'Layer 2', description: 'API layer', color: '#8b5cf6' },
+            { id: '03', label: 'Layer 3', description: 'Database layer', color: '#10b981' },
+          ]}
+        />
+
+        {/* Infinite Process Loop */}
+        <InfiniteProcessLoop
+          data={[
+            { id: 1, label: 'Entrada', description: 'Datos recibidos', color: '#06b6d4' },
+            { id: 2, label: 'Procesamiento', description: 'Transformación', color: '#8b5cf6' },
+            { id: 3, label: 'Optimización', description: 'Mejoras aplicadas', color: '#10b981' },
+            { id: 4, label: 'Salida', description: 'Resultados finales', color: '#f59e0b' },
+          ]}
+        />
+
+        {/* Pelican on Bicycle */}
+        <PelicanBicycle />
+      </section>
+    </main>
+  );
+}
+```
+
+---
+
+## Pro Tips
+
+### 1. Use Gemini 3.1 PRO High
+
+For complex animations like the pelican bicycle, use **Gemini 3.1 PRO High** (the highest reasoning level). It produces better results for intricate animations.
+
+### 2. Be Specific with Prompts
+
+The more detail you provide, the better:
+- Specify exact dimensions
+- Define color schemes (hex values)
+- Describe animation timing and easing
+- Mention specific SVG elements to use
+
+### 3. Leverage Antigravity's Validation
+
+Antigravity doesn't just generate code — it validates it. Watch the preview window to see:
+- Screenshots of the result
+- Verification that requirements were met
+- Error messages if something's wrong
+
+### 4. All Components Are Configurable
+
+Every component accepts a `data` prop or similar. You can:
+- Change labels, values, descriptions
+- Modify colors
+- Add or remove items
+- Adjust timing intervals
+
+### 5. Copy and Paste Directly
+
+The generated components are production-ready:
+- Copy directly from Antigravity
+- Paste into your Next.js project
+- Adjust imports if needed
+- Start dev server and see it work
+
+---
+
+## Complete Code Repository
+
+All the code and prompts from this video are available at:
+**[github.com/imzodev/svg-animate](https://github.com/imzodev/svg-animate)**
+
+Clone and run:
+
+```bash
+git clone https://github.com/imzodev/svg-animate.git
+cd svg-animate
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 to see all animations in action!
+
+---
+
+## Resources
+
+- **Antigravity Download**: https://antigravity.google/download
+- **Next.js Documentation**: https://nextjs.org/docs/app/getting-started/installation
+- **Gemini 3.1 PRO**: https://ai.google.dev/
+- **Project Repository**: https://github.com/imzodev/svg-animate
+
+---
+
+## Conclusion
+
+The combination of **Gemini 3.1 PRO** and **Antigravity** democratizes animated SVG creation. You don't need to be a math wizard or have years of animation experience — just describe what you want in natural language, and let AI handle the rest.
+
+**Key takeaways:**
+- Start with clear, specific prompts for Gemini
+- Use Antigravity's validation to verify results
+- All components are 100% pure SVG — no external libraries
+- Everything is configurable and reusable
+- From simple step sequences to complex character animations, Gemini 3.1 PRO can handle it
+
+Now go create something amazing — and remember, if you need a pelican riding a bicycle, just ask Gemini. It's been trained for that.
+
+---
+
+**Want more?** Check out my [GitHub repository](https://github.com/imzodev/svg-animate) for all the code and prompts from this video.
