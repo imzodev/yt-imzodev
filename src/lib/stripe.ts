@@ -109,30 +109,6 @@ export const checkout = {
     return session;
   },
 
-  // Create one-time payment checkout session
-  async createPaymentSession(amount: number, currency: string = 'usd', metadata?: Record<string, string>) {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency,
-            product_data: {
-              name: 'Premium Access',
-              description: 'One-time payment for lifetime access',
-            },
-            unit_amount: amount,
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${window.location.origin}/cancel`,
-      metadata,
-    });
-    return session;
-  },
-
   // Retrieve checkout session
   async retrieve(sessionId: string) {
     return await stripe.checkout.sessions.retrieve(sessionId, {

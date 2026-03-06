@@ -12,7 +12,7 @@ export const users = pgTable('users', {
   role: text('role').default('member'), // member, moderator, admin
   isActive: boolean('is_active').default(true),
   newsletterSubscribed: boolean('newsletter_subscribed').default(true),
-  subscriptionTier: text('subscription_tier').default('free'), // free, premium, lifetime
+  subscriptionTier: text('subscription_tier').default('free'), // free, premium
   subscriptionStatus: text('subscription_status').default('active'), // active, canceled, expired
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -102,7 +102,7 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   stripePriceId: text('stripe_price_id').notNull().unique(),
   amount: integer('amount').notNull(), // Amount in cents
   currency: text('currency').default('usd'),
-  interval: text('interval').notNull(), // month, year, once
+  interval: text('interval').notNull(), // month, year
   features: json('features').$type<string[]>(), // Array of features
   isActive: boolean('is_active').default(true),
   sortOrder: integer('sort_order').default(0),

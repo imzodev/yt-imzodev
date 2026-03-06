@@ -14,6 +14,20 @@ const { user, supabase } = authResult;
 
 let message = '';
 let isError = false;
+const billingState = Astro.url.searchParams.get('billing');
+
+if (!message && billingState === 'return') {
+  message = 'Returned from the billing portal.';
+} else if (!message && billingState === 'invalid-request') {
+  message = 'Invalid billing request. Please try again.';
+  isError = true;
+} else if (!message && billingState === 'profile-unavailable') {
+  message = 'Your billing profile could not be loaded.';
+  isError = true;
+} else if (!message && billingState === 'portal-error') {
+  message = 'We could not open the billing portal right now.';
+  isError = true;
+}
 
 // Handle form submission
 if (Astro.request.method === 'POST') {
@@ -57,8 +71,10 @@ const { data: subscription } = await supabase
   .from('subscriptions')
   .select('*, subscription_plans(name)')
   .eq('user_id', profile?.id)
-  .eq('status', 'active')
-  .single();
+  .in('status', ['active', 'trialing', 'past_due'])
+  .order('updated_at', { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
 // Fetch recent activity
 const { data: recentActivity } = await supabase
@@ -205,9 +221,9 @@ const csrfToken = getCsrfToken(Astro.cookies);
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-base-content/70">Status</span>
-                  <span class="badge badge-success gap-1">
+                  <span class={`badge gap-1 ${subscription.status === 'past_due' ? 'badge-warning' : 'badge-success'}`}>
                     <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
-                    Active
+                    {subscription.status}
                   </span>
                 </div>
                 {subscription.current_period_end && (
@@ -216,7 +232,10 @@ const csrfToken = getCsrfToken(Astro.cookies);
                     <span class="text-sm">{new Date(subscription.current_period_end).toLocaleDateString()}</span>
                   </div>
                 )}
-                <button class="btn btn-outline btn-sm w-full mt-4">Manage Billing</button>
+                <form method="POST" action="/api/billing/portal">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <button type="submit" class="btn btn-outline btn-sm w-full mt-4">Manage Billing</button>
+                </form>
               </div>
             ) : (
               <div class="text-center space-y-4 py-2">

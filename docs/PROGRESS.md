@@ -137,39 +137,44 @@
 
 ---
 
-## 🔄 Phase 5: Monetization (0% Complete)
+## 🔄 Phase 5: Monetization (45% Complete)
 
 ### 💳 Payment Processing
-- [ ] **Stripe Checkout** - Seamless payment experience
-- [ ] **Subscription Management** - Recurring billing system
-- [ ] **One-time Payments** - Lifetime access and special offers
+- [x] **Stripe Checkout** - Server-side checkout route implemented
+- [x] **Subscription Management** - Recurring billing foundation implemented
 - [ ] **Payment Methods** - Multiple payment options
-- [ ] **Invoice Management** - Billing history and receipts
+- [x] **Invoice Management** - Billing portal route and Stripe portal handoff implemented
 - [ ] **Failed Payment Handling** - Dunning and retry logic
 
 ### 🎫 Subscription System
-- [ ] **Subscription Tiers** - Free, Premium, Lifetime plans
-- [ ] **Plan Comparison** - Clear feature differentiation
+- [x] **Subscription Tiers** - Free and Premium plans seeded and wired
+- [x] **Plan Comparison** - `/pricing` page and profile upgrade entry point implemented
 - [ ] **Upgrade/Downgrade** - Flexible plan changes
 - [ ] **Trial Periods** - Free trial for premium features
-- [ ] **Cancellation Flow** - Easy subscription management
+- [x] **Cancellation Flow** - Stripe billing portal route implemented
 - [ ] **Subscription Analytics** - Revenue and churn tracking
 
 ### 🔒 Premium Content Gating
 - [ ] **Content Access Control** - Restrict premium content
-- [ ] **Feature Gating** - Limit features by subscription level
+- [x] **Feature Gating** - Paid forum access updated for premium-only subscriptions
 - [ ] **Pay-per-View** - Individual content purchases
 - [ ] **Early Access** - Premium content previews
 - [ ] **Exclusive Content** - Member-only resources
 - [ ] **Access Tokens** - Secure content delivery
 
 ### 👤 Customer Dashboard
-- [ ] **Billing Overview** - Current plan and payment status
+- [x] **Billing Overview** - Pricing and profile pages show billing status and management actions
 - [ ] **Invoice History** - Download past invoices
-- [ ] **Payment Methods** - Manage payment options
+- [x] **Payment Methods** - Stripe billing portal entry implemented
 - [ ] **Usage Analytics** - Track subscription benefits usage
 - [ ] **Support Access** - Premium customer support
-- [ ] **Cancellation Options** - Self-service account management
+- [x] **Cancellation Options** - Self-service management via Stripe billing portal
+
+### 🗄️ Database & Security
+- [x] **Premium Plan Seed** - `subscription_plans` synchronized to Supabase with the Premium monthly plan
+- [x] **Webhook Subscription Sync** - Stripe subscription state syncs into `users` and `subscriptions`
+- [x] **Supabase RLS Hardening** - Public `users` read removed and self-access policies tightened
+- [x] **Billing Policy Optimization** - Billing-related RLS policies updated to use `(select auth.uid())`
 
 ---
 
@@ -221,10 +226,10 @@
 - **SEO & Deployment** - Metadata, sitemap, robots.txt, Vercel deployment ready
 
 ### 🔄 In Progress (10%)
-- **Community Polish** - Documentation alignment and architectural refinement
+- **Phase 5 Monetization** - Remaining content gating, analytics, and customer dashboard expansion
 
 ### 📋 Planned (28%)
-- **Monetization UI** - Payment flows and subscription management
+- **Monetization Expansion** - Analytics, invoice history, and deeper premium gating
 - **Newsletter System** - Email marketing and automation
 - **Lab Tools** - Interactive utilities for members
 - **Analytics Dashboard** - User engagement and revenue tracking
@@ -283,25 +288,25 @@
 - **Authentication**: 100% ✅
 - **Content Management**: 100% ✅
 - **SEO & Deployment**: 100% ✅
-- **Community**: 0%
-- **Monetization**: 0%
+- **Community**: 75% ✅
+- **Monetization**: 45% 🔄
 
 ---
 
 ## 🔄 Last Updated
 - **Date**: 2026-03-06
-- **Changes**: Completed Authentication (Phase 2), Content Management (Phase 3), SEO optimization, and Vercel deployment setup
-- **Next Update**: After Community features implementation
+- **Changes**: Added Stripe checkout, billing portal, Stripe webhook syncing, Premium plan seed migration, and Supabase RLS hardening for monetization
+- **Next Update**: After premium content gating and billing analytics expansion
 
 ---
 
 ## 🎯 Next Steps
 
-1. **Start Phase 4**: Begin Community features implementation
-2. **Create forum components**: Categories, threads, and replies UI
-3. **Implement interactions**: Likes, upvotes, and marking best answers
-4. **Develop moderation UI**: Interface for content management
-5. **Set up profiles**: Expanded user profiles with activity history
+1. **Finish premium gating**: Enforce premium access across all gated content surfaces
+2. **Expand billing UX**: Add invoice history and richer billing state messaging
+3. **Track billing analytics**: Add MRR, conversion, and churn reporting
+4. **Harden webhook coverage**: Add handling for more Stripe lifecycle and failure events
+5. **Document runtime setup**: Stripe webhook forwarding and production deployment checklist
 
 ---
 

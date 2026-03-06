@@ -39,7 +39,7 @@ Complete database foundation for the YouTube Community Portal with 18 tables, Su
 ### Monetization (3)
 - `subscription_plans` - Configurable pricing tiers
 - `subscriptions` - Stripe integration for recurring payments
-- `payments` - One-time payment tracking
+- `payments` - Payment and billing event tracking
 
 ### Additional Features (2)
 - `newsletter_subscriptions` - Email marketing integration
@@ -76,7 +76,7 @@ All tables in the `public` schema have **Row Level Security (RLS)** enabled to p
 
 ### Stripe Integration
 - **Subscription management** - Create, update, cancel subscriptions
-- **Payment intents** - One-time payment processing
+- **Payment intents** - Payment flow support for billing integrations
 - **Checkout sessions** - Seamless payment flow
 - **Webhook handling** - Payment event processing
 - **Customer management** - Stripe customer integration

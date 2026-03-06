@@ -18,5 +18,5 @@ export function canAccessCategory(category: Pick<ForumCategory, 'accessLevel'>, 
     return true;
   }
 
-  return viewer.subscriptionTier === 'premium' || viewer.subscriptionTier === 'lifetime' || canModerate(viewer);
+  return viewer.subscriptionTier === 'premium' || canModerate(viewer);
 }

@@ -80,7 +80,7 @@ The database consists of **18 tables** organized into 6 main categories:
 #### Monetization (3 tables)
 - `subscription_plans` - Configurable pricing tiers
 - `subscriptions` - Stripe integration for recurring payments
-- `payments` - One-time payment tracking
+- `payments` - Payment and billing event tracking
 
 #### Additional Features (2 tables)
 - `newsletter_subscriptions` - Email marketing integration
@@ -137,7 +137,7 @@ auth.getCurrentSession()
 
 #### Features Implemented
 - **Subscription management** - Create, update, cancel subscriptions
-- **Payment intents** - One-time payment processing
+- **Payment intents** - Payment flow support for billing integrations
 - **Checkout sessions** - Seamless payment flow
 - **Webhook handling** - Payment event processing
 - **Customer management** - Stripe customer integration
@@ -156,9 +156,62 @@ customers.create(email, name)
 
 #### Payment Types Supported
 - **Subscriptions** - Monthly/yearly recurring payments
-- **One-time payments** - Lifetime access, special content
 - **Payment methods** - Credit cards, digital wallets
 - **Webhooks** - Payment event handling
+
+#### Webhook Setup
+
+##### Local Development
+1. Start the app locally and make sure it is reachable on your dev port.
+2. Forward Stripe events to the Astro webhook route:
+
+```bash
+stripe listen --forward-to localhost:4321/api/webhooks/stripe
+```
+
+3. Copy the webhook signing secret returned by Stripe CLI into your local environment:
+
+```env
+STRIPE_WEBHOOK_SECRET=whsec_your_local_cli_secret
+```
+
+4. Restart the dev server after updating the environment.
+
+##### Required Stripe Events
+- `checkout.session.completed`
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+
+These events are consumed by `src/pages/api/webhooks/stripe.ts` to sync subscription state into `users` and `subscriptions`.
+
+##### Production Setup
+1. In Stripe Dashboard, create a webhook endpoint for:
+
+```text
+https://your-domain.com/api/webhooks/stripe
+```
+
+2. Subscribe the endpoint to the same required events:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+
+3. Copy the production endpoint signing secret into your deployed environment:
+
+```env
+STRIPE_WEBHOOK_SECRET=whsec_your_production_webhook_secret
+```
+
+4. Verify that `STRIPE_SECRET_KEY` and `STRIPE_PRICE_PREMIUM` are also present in the deployed environment.
+
+##### Verification Checklist
+- Complete a test checkout from `/pricing`
+- Confirm Stripe delivers `checkout.session.completed`
+- Confirm a row exists or updates in `public.subscriptions`
+- Confirm the matching row in `public.users` changes to `subscription_tier = 'premium'`
+- Open the billing portal from `/profile` and confirm the return flow works
 
 ---
 
@@ -262,6 +315,7 @@ NODE_ENV=development
 1. **Secret Key**: Developers → API Keys → Secret key
 2. **Publishable Key**: Developers → API Keys → Publishable key
 3. **Webhook Secret**: Developers → Webhooks → Endpoint secret
+4. **Price ID**: Product catalog → Premium Membership → Monthly price
 
 ---
 
@@ -311,6 +365,14 @@ stripe.accounts.retrieve().then(console.log);
 #### Stripe Integration Issues
 - **Check**: STRIPE_SECRET_KEY and webhook configuration
 - **Solution**: Verify API keys and webhook endpoint setup
+
+#### Stripe Webhook Signature Errors
+- **Check**: `STRIPE_WEBHOOK_SECRET` matches the active Stripe CLI session or production endpoint
+- **Solution**: Copy the current signing secret again and restart the app
+
+#### Stripe Webhooks Not Updating Subscription State
+- **Check**: Required Stripe events are subscribed and forwarded to `/api/webhooks/stripe`
+- **Solution**: Re-run `stripe listen --forward-to localhost:4321/api/webhooks/stripe` for local development or update the production webhook endpoint configuration
 
 #### Migration Errors
 - **Check**: Database permissions and connection

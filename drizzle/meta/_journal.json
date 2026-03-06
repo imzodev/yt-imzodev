@@ -15,6 +15,20 @@
       "when": 1772774700000,
       "tag": "0001_phase4_community_support",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772810700000,
+      "tag": "0002_phase5_premium_plan",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772812451000,
+      "tag": "0003_phase5_rls_policy_hardening",
+      "breakpoints": true
     }
   ]
 }

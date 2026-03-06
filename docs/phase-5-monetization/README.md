@@ -4,25 +4,24 @@
 
 Monetization system for the YouTube Community Portal, including subscription management, payment processing, premium content gating, and customer dashboard.
 
-## 🔄 Status: 0% Complete (Planned)
+## 🔄 Status: 45% Complete (Foundation Implemented)
 
 ---
 
 ## 📋 Key Features
 
 ### 💳 Payment Processing
-- **Stripe Checkout** - Seamless payment experience
-- **Subscription Management** - Recurring billing system
-- **One-time Payments** - Lifetime access and special offers
+- **Stripe Checkout** - Server-side checkout route implemented
+- **Subscription Management** - Recurring billing foundation implemented
 - **Payment Methods** - Multiple payment options
-- **Invoice Management** - Billing history and receipts
+- **Invoice Management** - Billing portal routing in place
 
 ### 🎫 Subscription System
-- **Subscription Tiers** - Free, Premium, Lifetime plans
+- **Subscription Tiers** - Free and Premium plans
 - **Plan Comparison** - Clear feature differentiation
 - **Upgrade/Downgrade** - Flexible plan changes
 - **Trial Periods** - Free trial for premium features
-- **Cancellation Flow** - Easy subscription management
+- **Cancellation Flow** - Stripe billing portal route implemented
 
 ### 🔒 Premium Content Gating
 - **Content Access Control** - Restrict premium content
@@ -32,7 +31,7 @@ Monetization system for the YouTube Community Portal, including subscription man
 - **Exclusive Content** - Member-only resources
 
 ### 👤 Customer Dashboard
-- **Billing Overview** - Current plan and payment status
+- **Billing Overview** - Pricing page and profile billing status implemented
 - **Invoice History** - Download past invoices
 - **Payment Methods** - Manage payment options
 - **Usage Analytics** - Track subscription benefits usage
@@ -44,22 +43,19 @@ Monetization system for the YouTube Community Portal, including subscription man
 
 ### Free Tier (Always Free)
 - **Access**: Public videos, blog posts, forum reading
-- **Features**: Basic search, profile creation
+- **Features**: Basic search, profile creation, shared snippets
 - **Limitations**: No premium content, limited forum posting
 - **Support**: Community support only
 
 ### Premium Tier ($9.99/month)
 - **Access**: All content + exclusive features
-- **Features**: Premium videos, advanced search, forum posting
+- **Features**: Premium videos, advanced search, expanded forum participation
 - **Benefits**: No ads, priority support, early access
-- **Storage**: 1GB file storage for snippets
 
-### Lifetime Tier ($199 one-time)
-- **Access**: All current and future content
-- **Features**: All premium features forever
-- **Benefits**: Lifetime updates, exclusive content
-- **Storage**: Unlimited file storage
-- **Support**: Priority support forever
+### Current Stripe Catalog
+- **Product**: Premium Membership
+- **Price ID**: `price_1T7zPRC7xTF363N1xw3CSMnL`
+- **Billing Interval**: Monthly recurring
 
 ---
 
@@ -67,22 +63,31 @@ Monetization system for the YouTube Community Portal, including subscription man
 
 ### Payment Integration
 ```typescript
-// Planned payment functions
+// Current billing foundation
 createCheckoutSession(planId, userId)
 handleWebhookEvent(event)
 manageSubscription(subscriptionId, action)
-processPayment(paymentIntentId)
 handleFailedPayment(invoiceId)
 ```
 
 ### Access Control
 ```typescript
-// Planned access control functions
+// Current and planned access control functions
 checkUserAccess(userId, contentId)
 validateSubscription(userId, requiredTier)
 grantPremiumAccess(userId, duration)
 revokeAccess(userId, contentId)
 ```
+
+### Completed Foundation Work
+- **Server billing module** - Stripe customer creation, checkout creation, billing portal session creation, and subscription syncing
+- **Checkout route** - `POST /api/billing/checkout`
+- **Billing portal route** - `POST /api/billing/portal`
+- **Webhook route** - `POST /api/webhooks/stripe`
+- **Pricing entry point** - `/pricing`
+- **Profile integration** - Upgrade and manage billing actions wired into profile UI
+- **Supabase plan seed** - Premium plan inserted into `subscription_plans`
+- **Supabase RLS hardening** - Public `users` read removed and self-scope policies optimized
 
 ---
 
@@ -99,9 +104,12 @@ revokeAccess(userId, contentId)
 STRIPE_SECRET_KEY=sk_live_your_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 STRIPE_PRICE_PREMIUM=price_premium_id
-STRIPE_PRICE_LIFETIME=price_lifetime_id
 WEBHOOK_ENDPOINT_URL=https://your-domain.com/api/webhooks/stripe
 ```
+
+### Applied Database Migrations
+- `0002_phase5_premium_plan.sql`
+- `0003_phase5_rls_policy_hardening.sql`
 
 ---
 
@@ -109,7 +117,7 @@ WEBHOOK_ENDPOINT_URL=https://your-domain.com/api/webhooks/stripe
 
 ### Key Metrics
 - **Monthly Recurring Revenue (MRR)** - Predictable income
-- **Customer Lifetime Value (LTV)** - Long-term value per customer
+- **Customer Value (LTV)** - Long-term value per customer
 - **Churn Rate** - Subscription cancellation rate
 - **Conversion Rate** - Free to paid conversion
 - **Average Revenue Per User (ARPU)** - Revenue per active user
@@ -119,13 +127,13 @@ WEBHOOK_ENDPOINT_URL=https://your-domain.com/api/webhooks/stripe
 ## 📊 Timeline
 
 ### Week 1: Payment Integration
-- Stripe checkout implementation
-- Basic subscription management
-- Webhook handlers
+- Stripe checkout implementation ✅
+- Basic subscription management ✅
+- Webhook handlers ✅
 
 ### Week 2: Premium Features
 - Content access control
-- Customer dashboard
+- Customer dashboard foundation
 - Subscription analytics
 
 ### Week 3: Polish & Launch
