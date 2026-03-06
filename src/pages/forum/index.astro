@@ -1,0 +1,316 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import Alert from '../../components/ui/Alert.astro';
+import { getSession } from '../../lib/server/auth';
+import { handleForumIndexAction } from '../../lib/server/forum-actions';
+import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+import { canModerate, getForumActivityFeed, getForumCategories, getForumThreads, getUnreadNotificationCount, getViewerBySupabaseId } from '../../lib/server/forum';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro);
+if (authResult instanceof Response) return authResult;
+const { user } = authResult;
+const viewer = await getViewerBySupabaseId(user?.id);
+const csrfToken = getCsrfToken(Astro.cookies);
+
+const currentUrl = new URL(Astro.request.url);
+const selectedCategoryId = Number(currentUrl.searchParams.get('category')) || null;
+let feedbackMessage = currentUrl.searchParams.get('message') || '';
+let feedbackType = (currentUrl.searchParams.get('type') as 'success' | 'error' | null) || null;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+
+  if (!validateCsrfToken(Astro.cookies, formData.get('csrf_token') as string | null)) {
+    const redirectUrl = new URL(Astro.request.url);
+    redirectUrl.searchParams.set('type', 'error');
+    redirectUrl.searchParams.set('message', 'Invalid request. Please try again.');
+    return Astro.redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
+  }
+
+  try {
+    const redirectPath = await handleForumIndexAction({
+      formData,
+      viewer,
+      requestUrl: currentUrl,
+      origin: Astro.url.origin,
+    });
+
+    if (redirectPath) {
+      return Astro.redirect(redirectPath);
+    }
+  } catch (error) {
+    feedbackType = 'error';
+    feedbackMessage = error instanceof Error ? error.message : 'Something went wrong.';
+  }
+}
+
+const categories = await getForumCategories(viewer);
+const selectedCategory = categories.find((category) => category.id === selectedCategoryId) ?? null;
+const threads = await getForumThreads({
+  viewer,
+  categoryId: selectedCategory?.id ?? null,
+  includePending: canModerate(viewer),
+  limit: 30,
+});
+const activityFeed = await getForumActivityFeed(10);
+const unreadNotifications = viewer ? await getUnreadNotificationCount(viewer.id) : 0;
+---
+
+<Layout title="Forum - YouTube Community Portal">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 px-4 py-10 mt-16">
+    <div class="mx-auto flex max-w-7xl flex-col gap-8">
+      <section class="hero rounded-3xl bg-base-100 shadow-xl">
+        <div class="hero-content flex-col items-start gap-6 px-6 py-10 lg:flex-row lg:items-center lg:justify-between lg:px-10">
+          <div class="space-y-4">
+            <div class="badge badge-primary badge-outline">Phase 4 Community</div>
+            <h1 class="text-4xl font-black tracking-tight text-base-content">Developer forum, built around DaisyUI and simple server-rendered flows.</h1>
+            <p class="max-w-3xl text-base text-base-content/70">
+              Browse categories, ask questions, share solutions, and keep up with community activity. Notifications are simple in-app updates for now.
+            </p>
+            <div class="flex flex-wrap gap-3 text-sm text-base-content/70">
+              <span class="badge badge-ghost badge-lg">{categories.length} categories</span>
+              <span class="badge badge-ghost badge-lg">{threads.length} visible threads</span>
+              {viewer && <a href="/forum/notifications" class="badge badge-secondary badge-lg">{unreadNotifications} unread notifications</a>}
+              {canModerate(viewer) && <a href="/forum/moderation" class="badge badge-accent badge-lg">Moderation dashboard</a>}
+            </div>
+          </div>
+
+          <div class="w-full max-w-md rounded-2xl border border-base-300 bg-base-200/70 p-5">
+            <h2 class="text-lg font-semibold text-base-content">Forum guidelines</h2>
+            <ul class="mt-4 space-y-3 text-sm text-base-content/70">
+              <li class="flex gap-3"><span class="badge badge-primary badge-sm"></span><span>Use the most relevant category so questions stay easy to find.</span></li>
+              <li class="flex gap-3"><span class="badge badge-secondary badge-sm"></span><span>Replies and notifications update on page load, without realtime sockets.</span></li>
+              <li class="flex gap-3"><span class="badge badge-accent badge-sm"></span><span>Moderators can pin, lock, approve, and review reports as needed.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {feedbackMessage && feedbackType && (
+        <Alert type={feedbackType} message={feedbackMessage} />
+      )}
+
+      <div class="grid gap-8 xl:grid-cols-[320px,minmax(0,1fr)]">
+        <aside class="space-y-6">
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body gap-4">
+              <div class="flex items-center justify-between">
+                <h2 class="card-title text-xl">Categories</h2>
+                {selectedCategory && <a href="/forum" class="link link-hover text-sm">Clear filter</a>}
+              </div>
+              <div class="space-y-3">
+                {categories.length > 0 ? categories.map((category) => (
+                  <a
+                    href={`/forum?category=${category.id}`}
+                    class={`block rounded-2xl border p-4 transition hover:border-primary hover:bg-base-200 ${selectedCategory?.id === category.id ? 'border-primary bg-base-200' : 'border-base-300 bg-base-100'}`}
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                          <span class="h-3 w-3 rounded-full" style={`background:${category.color || '#8b5cf6'}`}></span>
+                          <h3 class="font-semibold text-base-content">{category.name}</h3>
+                        </div>
+                        <p class="text-sm text-base-content/70">{category.description || 'A dedicated space for this topic.'}</p>
+                      </div>
+                      <div class="badge badge-outline">{category.threadCount}</div>
+                    </div>
+                    <div class="mt-3 flex gap-2 text-xs text-base-content/60">
+                      <span>{category.replyCount} replies</span>
+                      <span>•</span>
+                      <span>{category.accessLevel}</span>
+                    </div>
+                  </a>
+                )) : (
+                  <div class="rounded-2xl border border-dashed border-base-300 p-4 text-sm text-base-content/70">
+                    No categories yet. {canModerate(viewer) ? 'Create the first one below.' : 'A moderator will add categories soon.'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {canModerate(viewer) && (
+            <section class="card bg-base-100 shadow-lg">
+              <div class="card-body">
+                <h2 class="card-title text-xl">Create category</h2>
+                <form method="POST" class="space-y-4">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <input type="hidden" name="intent" value="create-category" />
+                  <label class="form-control w-full">
+                    <div class="label"><span class="label-text">Name</span></div>
+                    <input type="text" name="name" class="input input-bordered w-full" required />
+                  </label>
+                  <label class="form-control w-full">
+                    <div class="label"><span class="label-text">Description</span></div>
+                    <textarea name="description" class="textarea textarea-bordered min-h-24"></textarea>
+                  </label>
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="form-control w-full">
+                      <div class="label"><span class="label-text">Color</span></div>
+                      <input type="text" name="color" class="input input-bordered w-full" placeholder="#8b5cf6" />
+                    </label>
+                    <label class="form-control w-full">
+                      <div class="label"><span class="label-text">Access</span></div>
+                      <select name="access_level" class="select select-bordered w-full">
+                        <option value="public">Public</option>
+                        <option value="member">Member</option>
+                        <option value="premium">Premium</option>
+                      </select>
+                    </label>
+                  </div>
+                  <button type="submit" class="btn btn-primary w-full">Create category</button>
+                </form>
+              </div>
+            </section>
+          )}
+
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <div class="flex items-center justify-between">
+                <h2 class="card-title text-xl">Activity feed</h2>
+                <span class="text-xs uppercase tracking-widest text-base-content/50">Server rendered</span>
+              </div>
+              <div class="space-y-3">
+                {activityFeed.length > 0 ? activityFeed.map(({ activity, user: activityUser }) => (
+                  <div class="rounded-2xl border border-base-300 bg-base-100 p-4">
+                    <p class="text-sm text-base-content">
+                      <span class="font-semibold">{activityUser?.name || activityUser?.username || 'Community member'}</span>
+                      <span class="text-base-content/70"> {activity.action.replaceAll('_', ' ')}</span>
+                    </p>
+                    <p class="mt-1 text-xs text-base-content/50">{activity.createdAt ? new Date(activity.createdAt).toLocaleString() : 'Recently'}</p>
+                  </div>
+                )) : (
+                  <div class="rounded-2xl border border-dashed border-base-300 p-4 text-sm text-base-content/70">
+                    Forum activity will appear here as members start participating.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <div class="space-y-6">
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body gap-5">
+              <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 class="card-title text-2xl">{selectedCategory ? selectedCategory.name : 'Recent discussions'}</h2>
+                  <p class="text-sm text-base-content/70">
+                    {selectedCategory ? selectedCategory.description || 'Threads in this category.' : 'Browse the latest conversations across the community.'}
+                  </p>
+                </div>
+                {viewer ? (
+                  <div class="badge badge-success badge-outline">Signed in as {viewer.username || viewer.name || viewer.email}</div>
+                ) : (
+                  <a href="/login" class="btn btn-outline btn-primary">Sign in to participate</a>
+                )}
+              </div>
+
+              {viewer && categories.length > 0 ? (
+                <form method="POST" class="rounded-3xl border border-base-300 bg-base-200/60 p-5">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <input type="hidden" name="intent" value="create-thread" />
+                  <div class="grid gap-4 lg:grid-cols-[220px,minmax(0,1fr)]">
+                    <div class="space-y-4">
+                      <label class="form-control w-full">
+                        <div class="label"><span class="label-text">Category</span></div>
+                        <select name="category_id" class="select select-bordered w-full" required>
+                          <option value="" disabled selected>Select a category</option>
+                          {categories.map((category) => (
+                            <option value={category.id} selected={selectedCategory?.id === category.id}>{category.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label class="form-control w-full">
+                        <div class="label"><span class="label-text">Title</span></div>
+                        <input type="text" name="title" class="input input-bordered w-full" maxlength="120" required />
+                      </label>
+                    </div>
+                    <div class="space-y-4">
+                      <label class="form-control w-full">
+                        <div class="label"><span class="label-text">Start the discussion</span></div>
+                        <textarea name="content" class="textarea textarea-bordered min-h-40 w-full" maxlength="5000" required></textarea>
+                      </label>
+                      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-xs text-base-content/60">Threads are {canModerate(viewer) ? 'published immediately.' : 'auto-approved unless moderation requires review.'}</p>
+                        <button type="submit" class="btn btn-primary">Post discussion</button>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div class="rounded-3xl border border-dashed border-base-300 p-5 text-sm text-base-content/70">
+                  {categories.length === 0
+                    ? 'A moderator needs to create at least one category before new discussions can be posted.'
+                    : 'Sign in to create a new discussion.'}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section class="space-y-4">
+            {threads.length > 0 ? threads.map((thread) => (
+              <article class="card bg-base-100 shadow-lg transition hover:shadow-xl">
+                <div class="card-body gap-4">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="space-y-2">
+                      <div class="flex flex-wrap items-center gap-2">
+                        {thread.isPinned && <span class="badge badge-warning">Pinned</span>}
+                        {thread.isLocked && <span class="badge badge-neutral">Locked</span>}
+                        {thread.status !== 'active' && <span class="badge badge-outline">{thread.status}</span>}
+                        {thread.category && (
+                          <span class="badge badge-outline" style={thread.category.color ? `border-color:${thread.category.color};color:${thread.category.color}` : undefined}>
+                            {thread.category.name}
+                          </span>
+                        )}
+                      </div>
+                      <a href={`/forum/thread/${thread.id}`} class="text-2xl font-bold text-base-content hover:text-primary">{thread.title}</a>
+                      <p class="line-clamp-3 text-sm text-base-content/70">{thread.content}</p>
+                    </div>
+                    <div class="stats stats-vertical border border-base-300 shadow-none sm:stats-horizontal">
+                      <div class="stat px-4 py-3">
+                        <div class="stat-title">Replies</div>
+                        <div class="stat-value text-lg">{thread.replyCount}</div>
+                      </div>
+                      <div class="stat px-4 py-3">
+                        <div class="stat-title">Views</div>
+                        <div class="stat-value text-lg">{thread.viewCount}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-4 text-sm text-base-content/60">
+                    <div class="flex flex-wrap items-center gap-3">
+                      <span>By <a href={thread.author?.username ? `/forum/member/${thread.author.username}` : '#'} class="font-medium text-base-content hover:text-primary">{thread.author?.name || thread.author?.username || 'Unknown member'}</a></span>
+                      <span>{thread.createdAt ? new Date(thread.createdAt).toLocaleDateString() : 'Recently'}</span>
+                      {thread.lastReplyAt && <span>Last reply {new Date(thread.lastReplyAt).toLocaleString()}</span>}
+                    </div>
+                    <a href={`/forum/thread/${thread.id}`} class="btn btn-sm btn-outline btn-primary">Open thread</a>
+                  </div>
+                </div>
+              </article>
+            )) : (
+              <div class="card bg-base-100 shadow-lg">
+                <div class="card-body items-center py-16 text-center">
+                  <div class="rounded-full bg-primary/10 p-4 text-primary">
+                    <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                    </svg>
+                  </div>
+                  <h3 class="mt-4 text-xl font-semibold text-base-content">No discussions yet</h3>
+                  <p class="max-w-md text-base-content/70">
+                    {selectedCategory ? 'This category is quiet right now. Start the first thread from the composer above.' : 'The community forum is ready for the first conversation.'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>

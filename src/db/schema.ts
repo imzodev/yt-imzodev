@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, boolean, integer, json, index, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, boolean, integer, json, index, uuid, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // Users table - Extended user profiles linked to Supabase Auth
 export const users = pgTable('users', {
@@ -291,6 +291,55 @@ export const forumReplies = pgTable('forum_replies', {
   index('forum_replies_parent_idx').on(table.parentId),
 ]);
 
+export const forumFollows = pgTable('forum_follows', {
+  id: serial('id').primaryKey(),
+  followerId: integer('follower_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  followingId: integer('following_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  uniqueIndex('forum_follows_pair_idx').on(table.followerId, table.followingId),
+  index('forum_follows_follower_idx').on(table.followerId),
+  index('forum_follows_following_idx').on(table.followingId),
+]);
+
+export const forumReports = pgTable('forum_reports', {
+  id: serial('id').primaryKey(),
+  reporterId: integer('reporter_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  postId: integer('post_id').references(() => forumPosts.id, { onDelete: 'cascade' }),
+  replyId: integer('reply_id').references(() => forumReplies.id, { onDelete: 'cascade' }),
+  reason: text('reason').notNull(),
+  details: text('details'),
+  status: text('status').default('open'),
+  reviewedBy: integer('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('forum_reports_reporter_idx').on(table.reporterId),
+  index('forum_reports_post_idx').on(table.postId),
+  index('forum_reports_reply_idx').on(table.replyId),
+  index('forum_reports_status_idx').on(table.status),
+]);
+
+export const forumNotifications = pgTable('forum_notifications', {
+  id: serial('id').primaryKey(),
+  recipientId: integer('recipient_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  actorId: integer('actor_id').references(() => users.id),
+  postId: integer('post_id').references(() => forumPosts.id, { onDelete: 'cascade' }),
+  replyId: integer('reply_id').references(() => forumReplies.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  isRead: boolean('is_read').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('forum_notifications_recipient_idx').on(table.recipientId),
+  index('forum_notifications_actor_idx').on(table.actorId),
+  index('forum_notifications_post_idx').on(table.postId),
+  index('forum_notifications_reply_idx').on(table.replyId),
+  index('forum_notifications_is_read_idx').on(table.isRead),
+]);
+
 // Newsletter Subscriptions table
 export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   id: serial('id').primaryKey(),
@@ -361,6 +410,9 @@ export const schema = {
   forumCategories,
   forumPosts,
   forumReplies,
+  forumFollows,
+  forumReports,
+  forumNotifications,
   newsletterSubscriptions,
   labTools,
   userActivity,
@@ -411,6 +463,15 @@ export type NewForumPost = typeof forumPosts.$inferInsert;
 
 export type ForumReply = typeof forumReplies.$inferSelect;
 export type NewForumReply = typeof forumReplies.$inferInsert;
+
+export type ForumFollow = typeof forumFollows.$inferSelect;
+export type NewForumFollow = typeof forumFollows.$inferInsert;
+
+export type ForumReport = typeof forumReports.$inferSelect;
+export type NewForumReport = typeof forumReports.$inferInsert;
+
+export type ForumNotification = typeof forumNotifications.$inferSelect;
+export type NewForumNotification = typeof forumNotifications.$inferInsert;
 
 export type NewsletterSubscription = typeof newsletterSubscriptions.$inferSelect;
 export type NewNewsletterSubscription = typeof newsletterSubscriptions.$inferInsert;

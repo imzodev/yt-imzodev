@@ -1,0 +1,267 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Navbar from '../../../components/Navbar.astro';
+import Alert from '../../../components/ui/Alert.astro';
+import { getSession } from '../../../lib/server/auth';
+import { handleForumThreadAction } from '../../../lib/server/forum-actions';
+import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+import { canModerate, getForumThreadById, getViewerBySupabaseId } from '../../../lib/server/forum';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro);
+if (authResult instanceof Response) return authResult;
+const { user } = authResult;
+const viewer = await getViewerBySupabaseId(user?.id);
+const csrfToken = getCsrfToken(Astro.cookies);
+const threadId = Number(Astro.params.id);
+
+if (!threadId) {
+  return Astro.redirect('/forum');
+}
+
+let feedbackMessage = Astro.url.searchParams.get('message') || '';
+let feedbackType = (Astro.url.searchParams.get('type') as 'success' | 'error' | null) || null;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+
+  if (!validateCsrfToken(Astro.cookies, formData.get('csrf_token') as string | null)) {
+    const redirectUrl = new URL(Astro.request.url);
+    redirectUrl.searchParams.set('type', 'error');
+    redirectUrl.searchParams.set('message', 'Invalid request. Please try again.');
+    return Astro.redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
+  }
+
+  try {
+    const redirectPath = await handleForumThreadAction({
+      formData,
+      threadId,
+      viewer,
+      requestUrl: Astro.url,
+    });
+
+    if (redirectPath) {
+      return Astro.redirect(redirectPath);
+    }
+  } catch (error) {
+    feedbackType = 'error';
+    feedbackMessage = error instanceof Error ? error.message : 'Something went wrong.';
+  }
+}
+
+const thread = await getForumThreadById(threadId, viewer);
+if (!thread) {
+  return Astro.redirect('/forum?type=error&message=Thread%20not%20found');
+}
+
+const isOwner = viewer ? thread.authorId === viewer.id : false;
+const canManageThread = !!viewer && (isOwner || canModerate(viewer));
+const bestAnswerId = thread.replies.find((reply) => reply.isAnswer)?.id ?? null;
+---
+
+<Layout title={`${thread.title} - Forum - YouTube Community Portal`}>
+  <Navbar />
+  <main class="min-h-screen bg-base-200 px-4 py-10 mt-16">
+    <div class="mx-auto flex max-w-6xl flex-col gap-6">
+      <div class="breadcrumbs px-2 text-sm text-base-content/60">
+        <ul>
+          <li><a href="/forum">Forum</a></li>
+          {thread.category && <li><a href={`/forum?category=${thread.category.id}`}>{thread.category.name}</a></li>}
+          <li>{thread.title}</li>
+        </ul>
+      </div>
+
+      {feedbackMessage && feedbackType && (
+        <Alert type={feedbackType} message={feedbackMessage} />
+      )}
+
+      <article class="card bg-base-100 shadow-xl">
+        <div class="card-body gap-6">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="space-y-3">
+              <div class="flex flex-wrap items-center gap-2">
+                {thread.isPinned && <span class="badge badge-warning">Pinned</span>}
+                {thread.isLocked && <span class="badge badge-neutral">Locked</span>}
+                {thread.status !== 'active' && <span class="badge badge-outline">{thread.status}</span>}
+                {thread.category && <span class="badge badge-outline">{thread.category.name}</span>}
+              </div>
+              <h1 class="text-3xl font-black text-base-content">{thread.title}</h1>
+              <div class="flex flex-wrap items-center gap-3 text-sm text-base-content/60">
+                <span>Started by <a class="font-medium text-base-content hover:text-primary" href={thread.author?.username ? `/forum/member/${thread.author.username}` : '#'}>{thread.author?.name || thread.author?.username || 'Unknown member'}</a></span>
+                <span>{thread.createdAt ? new Date(thread.createdAt).toLocaleString() : 'Recently'}</span>
+                <span>{thread.viewCount} views</span>
+                <span>{thread.replyCount} replies</span>
+              </div>
+            </div>
+
+            {canManageThread && (
+              <div class="flex flex-wrap gap-2">
+                <form method="POST">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <input type="hidden" name="intent" value="thread-state" />
+                  <input type="hidden" name="state" value="toggle-lock" />
+                  <button type="submit" class="btn btn-sm btn-outline">{thread.isLocked ? 'Unlock thread' : 'Lock thread'}</button>
+                </form>
+                <form method="POST">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <input type="hidden" name="intent" value="thread-state" />
+                  <input type="hidden" name="state" value="toggle-pin" />
+                  <button type="submit" class="btn btn-sm btn-outline btn-warning">{thread.isPinned ? 'Unpin' : 'Pin thread'}</button>
+                </form>
+                {canModerate(viewer) && thread.status === 'pending' && (
+                  <form method="POST">
+                    <input type="hidden" name="csrf_token" value={csrfToken} />
+                    <input type="hidden" name="intent" value="thread-state" />
+                    <input type="hidden" name="state" value="approve" />
+                    <button type="submit" class="btn btn-sm btn-success">Approve thread</button>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div class="rounded-3xl border border-base-300 bg-base-200/50 p-6 text-base leading-8 text-base-content/80 whitespace-pre-wrap">{thread.content}</div>
+
+          {!thread.isLocked && viewer ? (
+            <form method="POST" class="rounded-3xl border border-base-300 bg-base-200/50 p-5">
+              <input type="hidden" name="csrf_token" value={csrfToken} />
+              <input type="hidden" name="intent" value="reply" />
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text text-base font-medium">Add your reply</span></div>
+                <textarea name="content" class="textarea textarea-bordered min-h-36 w-full" maxlength="5000" required></textarea>
+              </label>
+              <div class="mt-4 flex items-center justify-between gap-3">
+                <p class="text-xs text-base-content/60">Replies are posted on submit and notifications update on the next page load.</p>
+                <button type="submit" class="btn btn-primary">Post reply</button>
+              </div>
+            </form>
+          ) : (
+            <div class="rounded-3xl border border-dashed border-base-300 p-5 text-sm text-base-content/70">
+              {thread.isLocked ? 'This thread is locked. New replies are disabled.' : 'Sign in to join the conversation.'}
+            </div>
+          )}
+        </div>
+      </article>
+
+      <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr),320px]">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between px-1">
+            <h2 class="text-2xl font-bold text-base-content">Replies</h2>
+            {bestAnswerId && <span class="badge badge-success badge-outline">Best answer selected</span>}
+          </div>
+
+          {thread.replies.length > 0 ? thread.replies.map((reply) => (
+            <article class={`card shadow-lg ${reply.isAnswer ? 'bg-success/5 ring-1 ring-success/30' : 'bg-base-100'}`}>
+              <div class="card-body gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="space-y-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <a href={reply.author?.username ? `/forum/member/${reply.author.username}` : '#'} class="font-semibold text-base-content hover:text-primary">{reply.author?.name || reply.author?.username || 'Community member'}</a>
+                      <span class="badge badge-outline">{reply.author?.role || 'member'}</span>
+                      {reply.isAnswer && <span class="badge badge-success">Best answer</span>}
+                    </div>
+                    <p class="text-xs text-base-content/50">{reply.createdAt ? new Date(reply.createdAt).toLocaleString() : 'Recently'}</p>
+                  </div>
+
+                  <div class="flex flex-wrap gap-2">
+                    {canManageThread && (
+                      <form method="POST">
+                        <input type="hidden" name="csrf_token" value={csrfToken} />
+                        <input type="hidden" name="intent" value="best-answer" />
+                        <input type="hidden" name="reply_id" value={reply.id} />
+                        <button type="submit" class="btn btn-sm btn-outline btn-success">{reply.isAnswer ? 'Keep as answer' : 'Mark best answer'}</button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-base-300 bg-base-200/40 p-4 whitespace-pre-wrap text-sm leading-7 text-base-content/80">{reply.content}</div>
+
+                {viewer && viewer.id !== reply.authorId && (
+                  <details class="collapse collapse-arrow border border-base-300 bg-base-100">
+                    <summary class="collapse-title py-3 text-sm font-medium">Report this reply</summary>
+                    <div class="collapse-content">
+                      <form method="POST" class="space-y-3">
+                        <input type="hidden" name="csrf_token" value={csrfToken} />
+                        <input type="hidden" name="intent" value="report" />
+                        <input type="hidden" name="reply_id" value={reply.id} />
+                        <label class="form-control w-full">
+                          <div class="label"><span class="label-text">Reason</span></div>
+                          <select name="reason" class="select select-bordered w-full" required>
+                            <option value="" disabled selected>Select a reason</option>
+                            <option value="spam">Spam</option>
+                            <option value="abuse">Abusive behavior</option>
+                            <option value="off-topic">Off-topic</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </label>
+                        <label class="form-control w-full">
+                          <div class="label"><span class="label-text">Details</span></div>
+                          <textarea name="details" class="textarea textarea-bordered min-h-24"></textarea>
+                        </label>
+                        <button type="submit" class="btn btn-sm btn-error btn-outline">Submit report</button>
+                      </form>
+                    </div>
+                  </details>
+                )}
+              </div>
+            </article>
+          )) : (
+            <div class="card bg-base-100 shadow-lg">
+              <div class="card-body items-center py-16 text-center">
+                <h3 class="text-xl font-semibold text-base-content">No replies yet</h3>
+                <p class="max-w-md text-base-content/70">Be the first person to help move this conversation forward.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <aside class="space-y-4">
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title text-xl">Discussion summary</h2>
+              <div class="stats stats-vertical shadow-none">
+                <div class="stat px-0 py-3">
+                  <div class="stat-title">Replies</div>
+                  <div class="stat-value text-2xl">{thread.replyCount}</div>
+                </div>
+                <div class="stat px-0 py-3">
+                  <div class="stat-title">Views</div>
+                  <div class="stat-value text-2xl">{thread.viewCount}</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {viewer && viewer.id !== thread.authorId && (
+            <section class="card bg-base-100 shadow-lg">
+              <div class="card-body">
+                <h2 class="card-title text-xl">Report thread</h2>
+                <form method="POST" class="space-y-3">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <input type="hidden" name="intent" value="report" />
+                  <label class="form-control w-full">
+                    <div class="label"><span class="label-text">Reason</span></div>
+                    <select name="reason" class="select select-bordered w-full" required>
+                      <option value="" disabled selected>Select a reason</option>
+                      <option value="spam">Spam</option>
+                      <option value="abuse">Abusive behavior</option>
+                      <option value="off-topic">Off-topic</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label class="form-control w-full">
+                    <div class="label"><span class="label-text">Details</span></div>
+                    <textarea name="details" class="textarea textarea-bordered min-h-24"></textarea>
+                  </label>
+                  <button type="submit" class="btn btn-error btn-outline">Submit thread report</button>
+                </form>
+              </div>
+            </section>
+          )}
+        </aside>
+      </section>
+    </div>
+  </main>
+</Layout>

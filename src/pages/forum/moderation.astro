@@ -1,0 +1,181 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import Alert from '../../components/ui/Alert.astro';
+import { getSession } from '../../lib/server/auth';
+import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+import { canModerate, getModerationSnapshot, getViewerBySupabaseId } from '../../lib/server/forum';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro, { requireAuth: true });
+if (authResult instanceof Response) return authResult;
+const { user } = authResult;
+const viewer = await getViewerBySupabaseId(user?.id);
+
+if (!canModerate(viewer)) {
+  return Astro.redirect('/forum?type=error&message=Moderator%20access%20required');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+let feedbackMessage = Astro.url.searchParams.get('message') || '';
+let feedbackType = (Astro.url.searchParams.get('type') as 'success' | 'error' | null) || null;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+
+  if (!validateCsrfToken(Astro.cookies, formData.get('csrf_token') as string | null)) {
+    const redirectUrl = new URL(Astro.request.url);
+    redirectUrl.searchParams.set('type', 'error');
+    redirectUrl.searchParams.set('message', 'Invalid request. Please try again.');
+    return Astro.redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
+  }
+
+  try {
+    const forumActions = await import('../../lib/server/forum-actions');
+
+    return Astro.redirect(await forumActions.handleForumModerationAction({
+      formData,
+      viewerId: viewer!.id,
+      requestUrl: Astro.url,
+    }));
+  } catch (error) {
+    feedbackType = 'error';
+    feedbackMessage = error instanceof Error ? error.message : 'Something went wrong.';
+  }
+}
+
+const moderation = await getModerationSnapshot();
+---
+
+<Layout title="Forum Moderation - YouTube Community Portal">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 px-4 py-10 mt-16">
+    <div class="mx-auto flex max-w-7xl flex-col gap-6">
+      <section class="card bg-base-100 shadow-xl">
+        <div class="card-body gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div class="badge badge-accent badge-outline">Moderator dashboard</div>
+            <h1 class="mt-3 text-3xl font-black text-base-content">Community moderation</h1>
+            <p class="mt-2 max-w-3xl text-base-content/70">Review reports, approve pending threads, and manage member access using simple server-rendered actions.</p>
+          </div>
+          <a href="/forum" class="btn btn-outline">Back to forum</a>
+        </div>
+      </section>
+
+      {feedbackMessage && feedbackType && (
+        <Alert type={feedbackType} message={feedbackMessage} />
+      )}
+
+      <div class="grid gap-6 xl:grid-cols-3">
+        <section class="card bg-base-100 shadow-lg xl:col-span-2">
+          <div class="card-body gap-5">
+            <div class="flex items-center justify-between">
+              <h2 class="card-title text-2xl">Open reports</h2>
+              <span class="badge badge-error badge-outline">{moderation.reports.length}</span>
+            </div>
+
+            {moderation.reports.length > 0 ? moderation.reports.map(({ report, reporter }) => (
+              <article class="rounded-3xl border border-base-300 bg-base-100 p-5">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div class="space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="badge badge-error">{report.reason}</span>
+                      <span class="badge badge-outline">{report.status}</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-base-content">Report #{report.id}</h3>
+                    <p class="text-sm text-base-content/70">Submitted by {reporter?.name || reporter?.username || 'Unknown member'} on {report.createdAt ? new Date(report.createdAt).toLocaleString() : 'Recently'}</p>
+                    {report.details && <p class="rounded-2xl bg-base-200 px-4 py-3 text-sm text-base-content/70">{report.details}</p>}
+                  </div>
+                  <div class="flex flex-col gap-2 sm:flex-row">
+                    <form method="POST">
+                      <input type="hidden" name="csrf_token" value={csrfToken} />
+                      <input type="hidden" name="intent" value="review-report" />
+                      <input type="hidden" name="report_id" value={report.id} />
+                      <input type="hidden" name="status" value="resolved" />
+                      <button type="submit" class="btn btn-sm btn-success">Resolve</button>
+                    </form>
+                    <form method="POST">
+                      <input type="hidden" name="csrf_token" value={csrfToken} />
+                      <input type="hidden" name="intent" value="review-report" />
+                      <input type="hidden" name="report_id" value={report.id} />
+                      <input type="hidden" name="status" value="dismissed" />
+                      <button type="submit" class="btn btn-sm btn-outline">Dismiss</button>
+                    </form>
+                  </div>
+                </div>
+              </article>
+            )) : (
+              <div class="rounded-3xl border border-dashed border-base-300 p-10 text-center">
+                <h3 class="text-xl font-semibold text-base-content">No open reports</h3>
+                <p class="mt-2 text-base-content/70">Reported posts and replies will appear here for review.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section class="space-y-6">
+          <div class="stats stats-vertical bg-base-100 shadow-lg">
+            <div class="stat">
+              <div class="stat-title">Pending threads</div>
+              <div class="stat-value text-warning">{moderation.pendingThreads.length}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Recent users</div>
+              <div class="stat-value text-primary">{moderation.users.length}</div>
+            </div>
+          </div>
+
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body gap-4">
+              <h2 class="card-title text-xl">Pending approval</h2>
+              {moderation.pendingThreads.length > 0 ? moderation.pendingThreads.map(({ post, author }) => (
+                <article class="rounded-3xl border border-base-300 bg-base-100 p-4">
+                  <h3 class="font-semibold text-base-content">{post.title}</h3>
+                  <p class="mt-1 text-sm text-base-content/70">By {author?.name || author?.username || 'Unknown member'}</p>
+                  <div class="mt-4 flex gap-2">
+                    <a href={`/forum/thread/${post.id}`} class="btn btn-sm btn-outline">Review</a>
+                    <form method="POST">
+                      <input type="hidden" name="csrf_token" value={csrfToken} />
+                      <input type="hidden" name="intent" value="thread-state" />
+                      <input type="hidden" name="post_id" value={post.id} />
+                      <input type="hidden" name="status" value="active" />
+                      <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                    </form>
+                  </div>
+                </article>
+              )) : (
+                <div class="rounded-2xl border border-dashed border-base-300 p-4 text-sm text-base-content/70">No threads are waiting for approval.</div>
+              )}
+            </div>
+          </section>
+
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body gap-4">
+              <h2 class="card-title text-xl">User access</h2>
+              <div class="space-y-3">
+                {moderation.users.map((member) => (
+                  <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300 bg-base-100 p-4">
+                    <div>
+                      <p class="font-semibold text-base-content">{member.name || member.username || 'Community member'}</p>
+                      <p class="text-xs text-base-content/60">{member.role} • joined {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : 'recently'}</p>
+                    </div>
+                    <form method="POST">
+                      <input type="hidden" name="csrf_token" value={csrfToken} />
+                      <input type="hidden" name="intent" value="user-state" />
+                      <input type="hidden" name="user_id" value={member.id} />
+                      <input type="hidden" name="is_active" value={member.isActive ? 'false' : 'true'} />
+                      <button type="submit" class={`btn btn-sm ${member.isActive ? 'btn-outline btn-error' : 'btn-success'}`}>
+                        {member.isActive ? 'Suspend' : 'Restore'}
+                      </button>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,167 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Navbar from '../../../components/Navbar.astro';
+import Alert from '../../../components/ui/Alert.astro';
+import { getSession } from '../../../lib/server/auth';
+import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+import { getForumMemberProfile, getViewerBySupabaseId } from '../../../lib/server/forum';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro);
+if (authResult instanceof Response) return authResult;
+const { user } = authResult;
+const viewer = await getViewerBySupabaseId(user?.id);
+const username = Astro.params.username;
+
+if (!username) {
+  return Astro.redirect('/forum');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+let feedbackMessage = Astro.url.searchParams.get('message') || '';
+let feedbackType = (Astro.url.searchParams.get('type') as 'success' | 'error' | null) || null;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+
+  if (!validateCsrfToken(Astro.cookies, formData.get('csrf_token') as string | null)) {
+    const redirectUrl = new URL(Astro.request.url);
+    redirectUrl.searchParams.set('type', 'error');
+    redirectUrl.searchParams.set('message', 'Invalid request. Please try again.');
+    return Astro.redirect(`${redirectUrl.pathname}${redirectUrl.search}`);
+  }
+
+  try {
+    const forumActions = await import('../../../lib/server/forum-actions');
+
+    return Astro.redirect(await forumActions.handleForumMemberAction({
+      formData,
+      username,
+      viewer,
+      requestUrl: Astro.url,
+    }));
+  } catch (error) {
+    feedbackType = 'error';
+    feedbackMessage = error instanceof Error ? error.message : 'Something went wrong.';
+  }
+}
+
+const profile = await getForumMemberProfile(username, viewer);
+if (!profile) {
+  return Astro.redirect('/forum?type=error&message=Member%20not%20found');
+}
+
+const joinedDate = profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'Recently';
+const activityLabelMap: Record<string, string> = {
+  forum_thread_created: 'Started a new discussion',
+  forum_reply_created: 'Posted a new reply',
+};
+---
+
+<Layout title={`${profile.name || profile.username} - Forum Member - YouTube Community Portal`}>
+  <Navbar />
+  <main class="min-h-screen bg-base-200 px-4 py-10 mt-16">
+    <div class="mx-auto flex max-w-6xl flex-col gap-6">
+      {feedbackMessage && feedbackType && (
+        <Alert type={feedbackType} message={feedbackMessage} />
+      )}
+
+      <section class="card bg-base-100 shadow-xl">
+        <div class="card-body gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div class="avatar placeholder">
+              <div class="w-24 rounded-full bg-primary/15 text-3xl font-bold text-primary ring ring-primary/20 ring-offset-2 ring-offset-base-100">
+                {profile.avatar ? <img src={profile.avatar} alt={profile.name || profile.username || 'Member avatar'} class="h-full w-full rounded-full object-cover" /> : <span>{(profile.name || profile.username || '?').charAt(0).toUpperCase()}</span>}
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <h1 class="text-3xl font-black text-base-content">{profile.name || profile.username || 'Community member'}</h1>
+                <span class="badge badge-primary badge-outline">{profile.role}</span>
+                <span class="badge badge-secondary badge-outline">{profile.subscriptionTier}</span>
+              </div>
+              <p class="text-base-content/70">@{profile.username || 'member'}</p>
+              <p class="max-w-2xl text-sm text-base-content/60">Joined {joinedDate}. Reputation is calculated from threads, replies, and best answers in this phase.</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-3">
+            <a href="/forum" class="btn btn-outline">Back to forum</a>
+            {viewer && viewer.id !== profile.id && (
+              <form method="POST">
+                <input type="hidden" name="csrf_token" value={csrfToken} />
+                <button type="submit" class={`btn ${profile.isFollowing ? 'btn-outline' : 'btn-primary'}`}>
+                  {profile.isFollowing ? 'Following' : 'Follow member'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section class="grid gap-6 lg:grid-cols-[320px,minmax(0,1fr)]">
+        <aside class="space-y-6">
+          <div class="stats stats-vertical bg-base-100 shadow-lg">
+            <div class="stat">
+              <div class="stat-title">Reputation</div>
+              <div class="stat-value text-primary">{profile.reputation}</div>
+              <div class="stat-desc">Phase 4 derived score</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Followers</div>
+              <div class="stat-value text-secondary">{profile.followerCount}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Following</div>
+              <div class="stat-value text-accent">{profile.followingCount}</div>
+            </div>
+          </div>
+
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title text-xl">Contribution summary</h2>
+              <div class="space-y-3 text-sm text-base-content/70">
+                <div class="flex items-center justify-between rounded-2xl bg-base-200 px-4 py-3"><span>Threads started</span><strong class="text-base-content">{profile.threadCount}</strong></div>
+                <div class="flex items-center justify-between rounded-2xl bg-base-200 px-4 py-3"><span>Replies posted</span><strong class="text-base-content">{profile.replyCount}</strong></div>
+                <div class="flex items-center justify-between rounded-2xl bg-base-200 px-4 py-3"><span>Best answers</span><strong class="text-base-content">{profile.answerCount}</strong></div>
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <div class="space-y-6">
+          <section class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <div class="flex items-center justify-between">
+                <h2 class="card-title text-2xl">Recent community activity</h2>
+                <span class="badge badge-ghost">Server rendered</span>
+              </div>
+
+              {profile.recentActivity.length > 0 ? (
+                <div class="space-y-4">
+                  {profile.recentActivity.map((activity) => (
+                    <div class="rounded-3xl border border-base-300 bg-base-100 p-5">
+                      <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h3 class="font-semibold text-base-content">{activityLabelMap[activity.action] || activity.action.replaceAll('_', ' ')}</h3>
+                          <p class="text-sm text-base-content/60">{activity.createdAt ? new Date(activity.createdAt).toLocaleString() : 'Recently'}</p>
+                        </div>
+                        {activity.threadId && <a href={`/forum/thread/${activity.threadId}`} class="btn btn-sm btn-outline">Open thread</a>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div class="rounded-3xl border border-dashed border-base-300 p-10 text-center">
+                  <h3 class="text-xl font-semibold text-base-content">No activity yet</h3>
+                  <p class="mt-2 text-base-content/70">When this member participates in forum threads, it will show up here.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+</Layout>
