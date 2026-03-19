@@ -1,0 +1,211 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Navbar from '../../../components/Navbar.astro';
+import Alert from '../../../components/ui/Alert.astro';
+import { getSession } from '../../../lib/server/auth';
+import { getCsrfToken } from '../../../lib/server/csrf';
+import { listCampaigns, getNewsletterStats } from '../../../lib/server/newsletter-campaigns';
+
+export const prerender = false;
+
+// Check if user is authenticated
+const authResult = await getSession(Astro);
+const user = authResult?.user;
+
+if (!user) {
+  return Astro.redirect('/login?redirect=/admin/newsletter');
+}
+
+// TODO: Add admin role check
+// For now, any authenticated user can access
+
+// Fetch campaign data
+const campaigns = await listCampaigns(20);
+const stats = await getNewsletterStats();
+
+const csrfToken = getCsrfToken(Astro.cookies);
+
+// Recent events placeholder (in production, fetch from database)
+const recentEvents: any[] = [];
+---
+
+<Layout title="Newsletter Admin - YouTube Community Portal">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold">Newsletter Admin</h1>
+        <p class="text-base-content/70 mt-2">Manage email campaigns and track analytics</p>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div class="bg-base-100 shadow rounded-lg p-6">
+          <div class="text-sm text-base-content/70">Total Subscribers</div>
+          <div class="text-3xl font-bold text-primary">{stats.totalSubscribers}</div>
+        </div>
+        <div class="bg-base-100 shadow rounded-lg p-6">
+          <div class="text-sm text-base-content/70">Active Subscribers</div>
+          <div class="text-3xl font-bold text-success">{stats.activeSubscribers}</div>
+        </div>
+        <div class="bg-base-100 shadow rounded-lg p-6">
+          <div class="text-sm text-base-content/70">Total Campaigns</div>
+          <div class="text-3xl font-bold">{stats.totalCampaigns}</div>
+        </div>
+        <div class="bg-base-100 shadow rounded-lg p-6">
+          <div class="text-sm text-base-content/70">Avg Open Rate</div>
+          <div class="text-3xl font-bold text-info">{stats.avgOpenRate}%</div>
+        </div>
+        <div class="bg-base-100 shadow rounded-lg p-6">
+          <div class="text-sm text-base-content/70">Avg Click Rate</div>
+          <div class="text-3xl font-bold text-warning">{stats.avgClickRate}%</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Campaigns List -->
+        <div class="lg:col-span-2">
+          <div class="bg-base-100 shadow rounded-lg">
+            <div class="p-6 border-b border-base-300 flex justify-between items-center">
+              <h2 class="text-xl font-semibold">Campaigns</h2>
+              <a href="/admin/newsletter/new" class="btn btn-primary btn-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Campaign
+              </a>
+            </div>
+
+            {campaigns.length === 0 ? (
+              <div class="p-8 text-center text-base-content/70">
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <p>No campaigns yet</p>
+                <p class="text-sm mt-2">Create your first newsletter campaign</p>
+              </div>
+            ) : (
+              <div class="divide-y divide-base-300">
+                {campaigns.map((campaign) => (
+                  <div class="p-4 hover:bg-base-200/50 transition-colors">
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                          <h3 class="font-medium">{campaign.subject}</h3>
+                          <span class={`badge badge-sm ${
+                            campaign.status === 'sent' ? 'badge-success' :
+                            campaign.status === 'scheduled' ? 'badge-info' :
+                            campaign.status === 'sending' ? 'badge-warning' :
+                            campaign.status === 'failed' ? 'badge-error' :
+                            'badge-ghost'
+                          }`}>
+                            {campaign.status}
+                          </span>
+                        </div>
+                        <div class="text-sm text-base-content/70 mt-1">
+                          {campaign.status === 'sent' ? (
+                            <span>Sent to {campaign.recipientCount} subscribers</span>
+                          ) : campaign.status === 'scheduled' ? (
+                            <span>Scheduled for {campaign.scheduledAt?.toLocaleDateString()}</span>
+                          ) : (
+                            <span>Draft</span>
+                          )}
+                        </div>
+                        {campaign.status === 'sent' && (
+                          <div class="flex gap-4 mt-2 text-sm">
+                            <span class="text-success">
+                              <strong>{campaign.openCount}</strong> opens
+                            </span>
+                            <span class="text-info">
+                              <strong>{campaign.clickCount}</strong> clicks
+                            </span>
+                            <span class="text-base-content/70">
+                              {campaign.recipientCount > 0 
+                                ? Math.round((campaign.openCount / campaign.recipientCount) * 100) 
+                                : 0}% open rate
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div class="flex gap-2">
+                        <a 
+                          href={`/admin/newsletter/${campaign.id}`} 
+                          class="btn btn-ghost btn-sm"
+                        >
+                          View
+                        </a>
+                        {campaign.status === 'draft' && (
+                          <button 
+                            class="btn btn-primary btn-sm"
+                            hx-post={`/api/admin/newsletter/campaigns/${campaign.id}/send`}
+                            hx-confirm="Send this campaign to all active subscribers?"
+                          >
+                            Send
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="lg:col-span-1">
+          <div class="bg-base-100 shadow rounded-lg">
+            <div class="p-6 border-b border-base-300">
+              <h2 class="text-xl font-semibold">Quick Actions</h2>
+            </div>
+            <div class="p-6 space-y-4">
+              <a href="/admin/newsletter/new" class="btn btn-primary btn-block">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create Campaign
+              </a>
+              <a href="/newsletter" class="btn btn-outline btn-block" target="_blank">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Preview Signup Page
+              </a>
+            </div>
+          </div>
+
+          <!-- Tips -->
+          <div class="bg-base-100 shadow rounded-lg mt-6">
+            <div class="p-6 border-b border-base-300">
+              <h2 class="text-xl font-semibold">Tips</h2>
+            </div>
+            <div class="p-6">
+              <ul class="text-sm space-y-3 text-base-content/80">
+                <li class="flex items-start gap-2">
+                  <svg class="w-5 h-5 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Best time to send: Tuesday-Thursday, 10am-2pm</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <svg class="w-5 h-5 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Keep subject lines under 50 characters</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <svg class="w-5 h-5 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Personalize content for better engagement</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>

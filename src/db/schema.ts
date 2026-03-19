@@ -371,6 +371,39 @@ export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   index('newsletter_subscriptions_status_idx').on(table.status),
 ]);
 
+// Newsletter Campaigns table - Email campaigns and newsletters
+export const newsletterCampaigns = pgTable('newsletter_campaigns', {
+  id: serial('id').primaryKey(),
+  subject: text('subject').notNull(),
+  content: text('content').notNull(),
+  template: text('template').default('default'), // default, promotional, digest
+  status: text('status').default('draft'), // draft, scheduled, sending, sent, failed
+  scheduledAt: timestamp('scheduled_at'),
+  sentAt: timestamp('sent_at'),
+  recipientCount: integer('recipient_count').default(0),
+  openCount: integer('open_count').default(0),
+  clickCount: integer('click_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('newsletter_campaigns_status_idx').on(table.status),
+  index('newsletter_campaigns_scheduled_at_idx').on(table.scheduledAt),
+]);
+
+// Newsletter Analytics table - Track email events
+export const newsletterAnalytics = pgTable('newsletter_analytics', {
+  id: serial('id').primaryKey(),
+  campaignId: integer('campaign_id').references(() => newsletterCampaigns.id).notNull(),
+  subscriberId: integer('subscriber_id').references(() => newsletterSubscriptions.id).notNull(),
+  eventType: text('event_type').notNull(), // open, click, unsubscribe, bounce
+  metadata: json('metadata'), // Additional event data (link clicked, etc.)
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('newsletter_analytics_campaign_id_idx').on(table.campaignId),
+  index('newsletter_analytics_subscriber_id_idx').on(table.subscriberId),
+  index('newsletter_analytics_event_type_idx').on(table.eventType),
+]);
+
 // Lab Tools table - Interactive tools and utilities for members
 export const labTools = pgTable('lab_tools', {
   id: serial('id').primaryKey(),
@@ -429,6 +462,8 @@ export const schema = {
   forumNotifications,
   notificationPreferences,
   newsletterSubscriptions,
+  newsletterCampaigns,
+  newsletterAnalytics,
   labTools,
   userActivity,
 };
