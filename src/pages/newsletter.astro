@@ -1,0 +1,211 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Alert from '../components/ui/Alert.astro';
+import { getSession } from '../lib/server/auth';
+import { getCsrfToken } from '../lib/server/csrf';
+import { getSubscriberByEmail, subscribeToNewsletter, unsubscribeFromNewsletter } from '../lib/server/newsletter';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro);
+const { user, supabase } = authResult instanceof Response ? { user: null, supabase: null } : authResult;
+
+let profile = null;
+let isSubscribed = false;
+let message = '';
+let isError = false;
+
+// Check URL params for feedback
+const subscribeState = Astro.url.searchParams.get('subscribe');
+if (subscribeState === 'success') {
+  message = 'You have been successfully subscribed to the newsletter!';
+} else if (subscribeState === 'unsubscribed') {
+  message = 'You have been unsubscribed from the newsletter.';
+} else if (subscribeState === 'error') {
+  message = 'Something went wrong. Please try again.';
+  isError = true;
+}
+
+// Handle form submission
+if (Astro.request.method === 'POST' && user) {
+  const formData = await Astro.request.formData();
+  const csrfToken = formData.get('csrf_token') as string | null;
+  
+  if (!getCsrfToken(Astro.cookies) || formData.get('csrf_token') !== Astro.cookies.get('csrf_token')?.value) {
+    message = 'Invalid request. Please try again.';
+    isError = true;
+  } else {
+    const action = formData.get('action') as string;
+    
+    if (action === 'subscribe') {
+      const { data: profileData } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('supabase_user_id', user.id)
+        .single();
+      
+      if (profileData) {
+        await subscribeToNewsletter({ 
+          email: profileData.email,
+          userId: profileData.id 
+        });
+        return Astro.redirect('/newsletter?subscribe=success');
+      }
+    } else if (action === 'unsubscribe') {
+      const email = formData.get('email') as string;
+      await unsubscribeFromNewsletter(email);
+      return Astro.redirect('/newsletter?subscribe=unsubscribed');
+    }
+  }
+}
+
+// Get current subscription status
+if (user) {
+  const { data: profileData } = await supabase
+    .from('users')
+    .select('id, email')
+    .eq('supabase_user_id', user.id)
+    .single();
+  
+  profile = profileData;
+  
+  if (profile?.email) {
+    const subscriber = await getSubscriberByEmail(profile.email);
+    isSubscribed = subscriber?.status === 'active';
+  }
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+---
+
+<Layout title="Newsletter - YouTube Community Portal">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
+    <div class="max-w-2xl mx-auto space-y-8">
+      
+      <!-- Header -->
+      <div class="text-center space-y-4">
+        <h1 class="text-4xl font-bold text-base-content">Newsletter</h1>
+        <p class="text-base-content/70 max-w-lg mx-auto">
+          Stay updated with the latest videos, tutorials, and community updates.
+        </p>
+      </div>
+
+      {message && (
+        <Alert type={isError ? 'error' : 'success'} message={message} />
+      )}
+
+      <!-- Newsletter Card -->
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          {user ? (
+            <div class="space-y-6">
+              <div class="flex items-center gap-4">
+                <div class={`w-12 h-12 rounded-full flex items-center justify-center ${isSubscribed ? 'bg-success text-success' : 'bg-base-300 text-base-content/50'}`}>
+                  {isSubscribed ? (
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  ) : (
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 012.22 0l3.64-3.64a2 2 0 012.83.87l-2.83 2.83a2 2 0 01-2.83 0L3 8z"></path>
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <h2 class="text-xl font-semibold">
+                    {isSubscribed ? 'You are subscribed' : 'Subscribe to our newsletter'}
+                  </h2>
+                  <p class="text-base-content/70">
+                    {isSubscribed 
+                      ? 'You will receive updates about new videos, blog posts, and community events.'
+                      : 'Get notified about new content, community updates, and exclusive tips.'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <form method="POST" class="space-y-4">
+                <input type="hidden" name="csrf_token" value={csrfToken} />
+                <input type="hidden" name="email" value={profile?.email} />
+                
+                {isSubscribed ? (
+                  <button 
+                    type="submit" 
+                    name="action" 
+                    value="unsubscribe" 
+                    class="btn btn-outline btn-error"
+                  >
+                    Unsubscribe
+                  </button>
+                ) : (
+                  <button 
+                    type="submit" 
+                    name="action" 
+                    value="subscribe" 
+                    class="btn btn-primary"
+                  >
+                    Subscribe
+                  </button>
+                )}
+              </form>
+
+              <!-- Newsletter Benefits -->
+              <div class="mt-8 pt-6 border-t border-base-300">
+                <h3 class="font-semibold mb-4">What you will get:</h3>
+                <ul class="space-y-3">
+                  <li class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>New video announcements</span>
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Weekly digest of popular content</span>
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Exclusive tips and tutorials</span>
+                  </li>
+                  <li class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Community highlights</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div class="text-center space-y-6 py-8">
+              <div class="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 012.22 0l3.64-3.64a2 2 0 012.83.87l-2.83 2.83a2 2 0 01-2.83 0L3 8z"></path>
+                </svg>
+              </div>
+              <h2 class="text-xl font-semibold">Sign in to subscribe</h2>
+              <p class="text-base-content/70">
+                Create an account or sign in to manage your newsletter subscription.
+              </p>
+              <a href="/login?next=/newsletter" class="btn btn-primary">
+                Sign In
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <!-- Footer Note -->
+      <p class="text-center text-sm text-base-content/50">
+        We respect your privacy. You can unsubscribe at any time.
+      </p>
+
+    </div>
+  </main>
+</Layout>
