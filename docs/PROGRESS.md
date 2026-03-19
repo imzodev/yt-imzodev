@@ -1,6 +1,6 @@
 # Project Progress Tracker
 
-## 🎯 Overall Progress: 70% Complete
+## 🎯 Overall Progress: 75% Complete
 
 ---
 
@@ -131,31 +131,26 @@
 - [x] **User Management** - Suspend/restore problematic users
 - [ ] **Content Filtering** - Deferred until a later phase
 
-### ⏸️ Deferred in This Iteration
-- [ ] **Private Messages** - Not included in the current Phase 4 slice
-- [ ] **Content Filtering** - No automated filtering in this iteration
-- [ ] **Real-time Updates** - No websockets or live notifications in this iteration
-
 ---
 
-## 🔄 Phase 5: Monetization (70% Complete)
+## ✅ Phase 5: Monetization (70% Complete)
 
 ### 💳 Payment Processing
 - [x] **Stripe Checkout** - Server-side checkout route implemented
 - [x] **Subscription Management** - Recurring billing foundation implemented
 - [ ] **Payment Methods** - Multiple payment options
-- [x] **Invoice Management** - Billing portal route and Stripe portal handoff implemented
-- [ ] **Failed Payment Handling** - Dunning and retry logic
+- [x] **Invoice Management** - Billing portal route and Stripe portal handoff
+- [ ] **Failed Payment Handling** - Dunning and retry logic (Issue #4)
 
 ### 🎫 Subscription System
 - [x] **Subscription Tiers** - Free and Premium plans seeded and wired
-- [x] **Plan Comparison** - `/pricing` page and profile upgrade entry point implemented
+- [x] **Plan Comparison** - `/pricing` page and profile upgrade entry point
 - [ ] **Upgrade/Downgrade** - Flexible plan changes
-- [x] **Trial Periods** - 7-day free trial for premium features ✨ NEW
+- [x] **Trial Periods** - 7-day free trial for premium features
 - [x] **Cancellation Flow** - Stripe billing portal route implemented
-- [ ] **Subscription Analytics** - Revenue and churn tracking
+- [ ] **Subscription Analytics** - Revenue and churn tracking (Issue #4)
 
-### 🔒 Premium Content Gating ✨ NEW
+### 🔒 Premium Content Gating
 - [x] **Content Access Control** - Restrict premium content based on subscription tier
 - [x] **Feature Gating** - Paid forum access updated for premium-only subscriptions
 - [ ] **Pay-per-View** - Individual content purchases
@@ -166,24 +161,18 @@
 - [x] **Premium Gate Component** - Upgrade prompts for locked content
 
 ### 👤 Customer Dashboard
-- [x] **Billing Overview** - Pricing and profile pages show billing status and management actions
-- [x] **Invoice History** - Download past invoices ✨ NEW
+- [x] **Billing Overview** - Pricing and profile pages show billing status
+- [x] **Invoice History** - Download past invoices
 - [x] **Payment Methods** - Stripe billing portal entry implemented
-- [ ] **Usage Analytics** - Track subscription benefits usage
+- [ ] **Usage Analytics** - Track subscription benefits usage (Issue #4)
 - [ ] **Support Access** - Premium customer support
 - [x] **Cancellation Options** - Self-service management via Stripe billing portal
-
-### 🗄️ Database & Security
-- [x] **Premium Plan Seed** - `subscription_plans` synchronized to Supabase with the Premium monthly plan
-- [x] **Webhook Subscription Sync** - Stripe subscription state syncs into `users` and `subscriptions`
-- [x] **Supabase RLS Hardening** - Public `users` read removed and self-access policies tightened
-- [x] **Billing Policy Optimization** - Billing-related RLS policies updated to use `(select auth.uid())`
 
 ---
 
 ## 🔄 Phase 6: Additional Features (15% Complete)
 
-### 📧 Newsletter System ✨ NEW
+### 📧 Newsletter System
 - [x] **Email Templates** - Professional newsletter designs
 - [x] **Subscriber Management** - Subscribe/unsubscribe functionality
 - [x] **API Routes** - `/api/newsletter/subscribe`, `/api/newsletter/unsubscribe`
@@ -192,7 +181,7 @@
 - [ ] **Content Automation** - Weekly digest and updates
 - [ ] **Campaign Management** - Create and send newsletters
 - [ ] **Analytics Tracking** - Open rates, click-through rates
-- [ ] **Unsubscribe Handling** - GDPR-compliant opt-out
+- [ ] **Unsubscribe Handling** - GDPR-compliant opt-out flow
 
 ### 🔬 Lab Tools (Interactive Utilities)
 - [ ] **Code Formatter** - Online code beautifier
@@ -221,61 +210,23 @@
 
 ## 📊 Current Status Summary
 
-### ✅ Completed (78%)
+### ✅ Completed (80%)
 - **Database Foundation** - 18 tables with Supabase + Drizzle ORM
 - **Authentication Integration** - Supabase Auth setup complete
 - **Authentication UI** - User registration, login, profile, and OAuth flows
 - **Content Management** - Video catalog, blog, snippets, and global search
-- **Community Features** - Forum, moderation, member profiles, notifications, and notification preferences
-- **Payment System** - Stripe integration configured
-- **Development Tools** - Migration system and TypeScript types
-- **SEO & Deployment** - Metadata, sitemap, robots.txt, Vercel deployment ready
+- **Community Features** - Forum, moderation, member profiles, notifications
+- **Payment System** - Stripe integration with checkout and billing portal
+- **Monetization** - Content gating, invoice history, trial periods
+- **Newsletter** - Subscription management system
 
 ### 🔄 In Progress (10%)
-- **Phase 5 Monetization** - Content gating complete, invoice history and trial periods added
-- **Phase 6 Newsletter** - Subscription system complete
+- **Phase 6 Newsletter** - Campaign management and analytics tracking
 
-### 📋 Planned (12%)
-- **Monetization Expansion** - Analytics, dunning, and admin dashboard (Issue #4)
-- **Newsletter Campaign Management** - Create and send newsletters
+### 📋 Planned (10%)
+- **Admin Dashboard** - Analytics, dunning (Issue #4)
 - **Lab Tools** - Interactive utilities for members
-- **Analytics Dashboard** - User engagement and revenue tracking
 - **Real-time Features** - Live updates and notifications
-
----
-
-## 🎯 Upcoming Milestones
-
-### Milestone 1: Authentication System (Week 1-3) ✅
-- User registration and login
-- OAuth integration
-- Profile management
-- Protected routes
-
-### Milestone 2: Content Management (Week 4-6) ✅
-- Video catalog with playlists
-- Blog system
-- Code snippets library
-- Search functionality
-
-### Milestone 3: Community Features (Week 7-9) ✅
-- Forum system
-- User interactions
-- Moderation tools
-- Reputation system
-- Notification preferences
-
-### Milestone 4: Monetization (Week 10-12)
-- Stripe payments
-- Subscription system
-- Premium content
-- Customer dashboard
-
-### Milestone 5: Additional Features (Week 13-15)
-- Newsletter system
-- Lab tools
-- Analytics dashboard
-- Real-time notifications
 
 ---
 
@@ -286,11 +237,6 @@
 - **Relationships**: 30+ ✅
 - **Indexes**: 50+ ✅
 - **Migration**: Applied ✅
-
-### Code
-- **Schema files**: Complete ✅
-- **Integration files**: Complete ✅
-- **Documentation**: Complete ✅
 
 ### Features
 - **Authentication**: 100% ✅
@@ -304,18 +250,18 @@
 
 ## 🔄 Last Updated
 - **Date**: 2026-03-19
-- **Changes**: Phase 5 content gating, invoice history, and trial periods. Phase 6 newsletter subscription system.
-- **Next Update**: After Phase 6 newsletter campaign management and analytics tracking
+- **Changes**: Merged PR #5 (content gating) and PR #6 (invoice history, trials). Phase 5 at 70%.
+- **Next Update**: After Phase 6 newsletter campaign management
 
 ---
 
 ## 🎯 Next Steps
 
-1. **Finish premium gating**: Enforce premium access across all gated content surfaces
-2. **Expand billing UX**: Add invoice history and richer billing state messaging
-3. **Track billing analytics**: Add MRR, conversion, and churn reporting
-4. **Harden webhook coverage**: Add handling for more Stripe lifecycle and failure events
-5. **Document runtime setup**: Stripe webhook forwarding and production deployment checklist
+1. ~~Finish premium gating~~ ✅
+2. ~~Add invoice history and trial periods~~ ✅
+3. **Newsletter campaign management** - Create and send newsletters
+4. **Newsletter analytics** - Track open rates and click-throughs
+5. **Admin Dashboard** (Issue #4) - Revenue analytics and dunning
 
 ---
 
