@@ -1,0 +1,275 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+---
+
+<Layout title="Color Palette Generator - Lab Tools">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <a href="/lab" class="btn btn-ghost btn-sm mb-4">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Lab
+        </a>
+        <h1 class="text-3xl font-bold">Color Palette Generator</h1>
+        <p class="text-base-content/70 mt-2">Generate beautiful color palettes for your designs</p>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex flex-wrap gap-4 mb-8">
+        <button id="generate-btn" class="btn btn-primary">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Generate Palette
+        </button>
+        <select id="palette-type" class="select select-bordered">
+          <option value="random">Random</option>
+          <option value="warm">Warm Colors</option>
+          <option value="cool">Cool Colors</option>
+          <option value="pastel">Pastel</option>
+          <option value="vibrant">Vibrant</option>
+          <option value="earth">Earth Tones</option>
+          <option value="monochrome">Monochrome</option>
+        </select>
+        <select id="palette-size" class="select select-bordered">
+          <option value="3">3 Colors</option>
+          <option value="4">4 Colors</option>
+          <option value="5" selected>5 Colors</option>
+          <option value="6">6 Colors</option>
+          <option value="7">7 Colors</option>
+        </select>
+        <button id="export-btn" class="btn btn-outline">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export CSS
+        </button>
+      </div>
+
+      <!-- Palette Display -->
+      <div id="palette-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <!-- Colors will be generated here -->
+      </div>
+
+      <!-- Color Details -->
+      <div id="color-details" class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h2 class="card-title mb-4">Color Values</h2>
+          <div id="color-list" class="space-y-2">
+            <!-- Color details will appear here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Modal -->
+      <dialog id="export-modal" class="modal">
+        <div class="modal-box">
+          <h3 class="font-bold text-lg mb-4">Export Palette</h3>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">CSS Variables</span>
+            </label>
+            <textarea id="css-export" class="textarea textarea-bordered font-mono text-sm h-64" readonly></textarea>
+          </div>
+          <div class="modal-action">
+            <button id="copy-css-btn" class="btn btn-primary">Copy CSS</button>
+            <form method="dialog">
+              <button class="btn">Close</button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
+    </div>
+  </main>
+
+  <script>
+    const paletteContainer = document.getElementById('palette-container') as HTMLDivElement;
+    const colorList = document.getElementById('color-list') as HTMLDivElement;
+    const generateBtn = document.getElementById('generate-btn') as HTMLButtonElement;
+    const paletteTypeSelect = document.getElementById('palette-type') as HTMLSelectElement;
+    const paletteSizeSelect = document.getElementById('palette-size') as HTMLSelectElement;
+    const exportBtn = document.getElementById('export-btn') as HTMLButtonElement;
+    const exportModal = document.getElementById('export-modal') as HTMLDialogElement;
+    const cssExport = document.getElementById('css-export') as HTMLTextAreaElement;
+    const copyCssBtn = document.getElementById('copy-css-btn') as HTMLButtonElement;
+
+    let currentPalette: string[] = [];
+
+    function hslToHex(h: number, s: number, l: number): string {
+      s /= 100;
+      l /= 100;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+      };
+      return `#${f(0)}${f(8)}${f(4)}`;
+    }
+
+    function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+
+    function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          case b: h = ((r - g) / d + 4) / 6; break;
+        }
+      }
+
+      return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    }
+
+    function generateRandomColor(type: string): string {
+      switch (type) {
+        case 'warm':
+          return hslToHex(Math.random() * 60, 60 + Math.random() * 40, 40 + Math.random() * 30);
+        case 'cool':
+          return hslToHex(180 + Math.random() * 80, 40 + Math.random() * 40, 40 + Math.random() * 30);
+        case 'pastel':
+          return hslToHex(Math.random() * 360, 40 + Math.random() * 30, 70 + Math.random() * 20);
+        case 'vibrant':
+          return hslToHex(Math.random() * 360, 70 + Math.random() * 30, 45 + Math.random() * 20);
+        case 'earth':
+          return hslToHex(20 + Math.random() * 40, 30 + Math.random() * 40, 30 + Math.random() * 40);
+        case 'monochrome': {
+          const baseL = 20 + Math.random() * 60;
+          return hslToHex(200, 5 + Math.random() * 10, baseL);
+        }
+        default:
+          return hslToHex(Math.random() * 360, 50 + Math.random() * 50, 40 + Math.random() * 30);
+      }
+    }
+
+    function generatePalette(): void {
+      const type = paletteTypeSelect.value;
+      const size = parseInt(paletteSizeSelect.value);
+      currentPalette = Array.from({ length: size }, () => generateRandomColor(type));
+      renderPalette();
+    }
+
+    function renderPalette(): void {
+      paletteContainer.innerHTML = currentPalette.map((color, index) => {
+        const rgb = hexToRgb(color);
+        const hsl = rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : null;
+        const isLight = hsl ? hsl.l > 50 : false;
+        
+        return `
+          <div 
+            class="card bg-base-100 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+            data-color="${color}"
+            data-index="${index}"
+          >
+            <div 
+              class="h-32 rounded-t-lg"
+              style="background-color: ${color}"
+            ></div>
+            <div class="card-body p-3">
+              <p class="font-mono text-sm font-semibold ${isLight ? 'text-base-content' : ''}">${color.toUpperCase()}</p>
+              <div class="flex gap-1 mt-1">
+                <button class="btn btn-xs btn-ghost copy-color" data-color="${color}">Copy</button>
+                <button class="btn btn-xs btn-ghost lock-color" data-index="${index}">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Render color details
+      colorList.innerHTML = currentPalette.map((color, index) => {
+        const rgb = hexToRgb(color);
+        const hsl = rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : null;
+        
+        return `
+          <div class="flex items-center gap-4 p-2 rounded-lg hover:bg-base-200">
+            <div class="w-8 h-8 rounded" style="background-color: ${color}"></div>
+            <div class="flex-1">
+              <p class="font-mono text-sm font-medium">${color.toUpperCase()}</p>
+              <p class="text-xs text-base-content/70">
+                ${rgb ? `RGB(${rgb.r}, ${rgb.g}, ${rgb.b})` : ''}
+                ${hsl ? ` • HSL(${hsl.h}, ${hsl.s}%, ${hsl.l}%)` : ''}
+              </p>
+            </div>
+            <button class="btn btn-xs btn-ghost copy-color" data-color="${color}">Copy</button>
+          </div>
+        `;
+      }).join('');
+
+      // Add copy handlers
+      document.querySelectorAll('.copy-color').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const color = (btn as HTMLElement).dataset.color!;
+          await navigator.clipboard.writeText(color);
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    }
+
+    function generateCSSExport(): string {
+      const lines = [
+        ':root {',
+        ...currentPalette.map((color, i) => `  --color-${i + 1}: ${color};`),
+        '',
+        '  /* Usage examples */',
+        '  --primary: var(--color-1);',
+        '  --secondary: var(--color-2);',
+        '  --accent: var(--color-3);',
+        '}'
+      ];
+      return lines.join('\n');
+    }
+
+    generateBtn.addEventListener('click', generatePalette);
+    
+    // Generate initial palette
+    generatePalette();
+
+    exportBtn.addEventListener('click', () => {
+      cssExport.value = generateCSSExport();
+      exportModal.showModal();
+    });
+
+    copyCssBtn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(cssExport.value);
+      copyCssBtn.textContent = 'Copied!';
+      setTimeout(() => copyCssBtn.textContent = 'Copy CSS', 1500);
+    });
+
+    // Keyboard shortcut
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        e.preventDefault();
+        generatePalette();
+      }
+    });
+  </script>
+</Layout>
