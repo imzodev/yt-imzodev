@@ -236,6 +236,7 @@ const csrfToken = getCsrfToken(Astro.cookies);
                   <input type="hidden" name="csrf_token" value={csrfToken} />
                   <button type="submit" class="btn btn-outline btn-sm w-full mt-4">Manage Billing</button>
                 </form>
+                <a href="/profile/invoices" class="btn btn-ghost btn-sm w-full mt-2">View Invoices</a>
               </div>
             ) : (
               <div class="text-center space-y-4 py-2">

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { createPremiumCheckoutSession, getBillingProfileBySupabaseUserId } from '../../../lib/server/billing';
+import { createPremiumCheckoutSession, createPremiumCheckoutWithTrial, getBillingProfileBySupabaseUserId } from '../../../lib/server/billing';
 import { validateCsrfToken } from '../../../lib/server/csrf';
 import { getSupabaseServerClient } from '../../../lib/supabase';
 
@@ -9,6 +9,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, url }) => {
   try {
     const formData = await request.formData();
     const csrfToken = formData.get('csrf_token') as string | null;
+    const withTrial = formData.get('trial') === 'true';
 
     if (!validateCsrfToken(cookies, csrfToken)) {
       return redirect('/pricing?billing=invalid-request');
@@ -27,7 +28,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect, url }) => {
       return redirect('/pricing?billing=profile-unavailable');
     }
 
-    const session = await createPremiumCheckoutSession(profile, url.origin);
+    const session = withTrial 
+      ? await createPremiumCheckoutWithTrial(profile, url.origin, 7)
+      : await createPremiumCheckoutSession(profile, url.origin);
 
     if (!session.url) {
       return redirect('/pricing?billing=checkout-error');
