@@ -4,6 +4,7 @@ import Navbar from '../../components/Navbar.astro';
 import Alert from '../../components/ui/Alert.astro';
 import { getSession } from '../../lib/server/auth';
 import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+import { isSubscribedToNewsletter, subscribeToNewsletter, unsubscribeFromNewsletter } from '../../lib/server/newsletter';
 
 export const prerender = false;
 
@@ -83,6 +84,12 @@ const { data: recentActivity } = await supabase
   .eq('user_id', profile?.id)
   .order('created_at', { ascending: false })
   .limit(5);
+
+// Check newsletter subscription status
+let isNewsletterSubscribed = false;
+if (profile?.email) {
+  isNewsletterSubscribed = await isSubscribedToNewsletter(profile.email);
+}
 
 const csrfToken = getCsrfToken(Astro.cookies);
 ---
@@ -236,6 +243,7 @@ const csrfToken = getCsrfToken(Astro.cookies);
                   <input type="hidden" name="csrf_token" value={csrfToken} />
                   <button type="submit" class="btn btn-outline btn-sm w-full mt-4">Manage Billing</button>
                 </form>
+                <a href="/profile/invoices" class="btn btn-ghost btn-sm w-full mt-2">View Invoices</a>
               </div>
             ) : (
               <div class="text-center space-y-4 py-2">
@@ -248,6 +256,26 @@ const csrfToken = getCsrfToken(Astro.cookies);
                 <a href="/pricing" class="btn btn-primary w-full">Upgrade to Pro</a>
               </div>
             )}
+          </div>
+
+          <!-- Newsletter Subscription -->
+          <div class="bg-base-100 shadow rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 border-b border-base-300 pb-4">Newsletter</h2>
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-base-content/70 text-sm">
+                  {isNewsletterSubscribed 
+                    ? 'You are subscribed to the newsletter' 
+                    : 'Subscribe to get updates about new content'}
+                  </p>
+              </div>
+              <a 
+                href="/newsletter" 
+                class={`btn btn-sm ${isNewsletterSubscribed ? 'btn-ghost' : 'btn-primary'}`}
+              >
+                {isNewsletterSubscribed ? 'Manage' : 'Subscribe'}
+              </a>
+            </div>
           </div>
 
           <!-- Recent Activity -->

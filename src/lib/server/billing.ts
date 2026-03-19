@@ -187,3 +187,106 @@ export async function syncCheckoutSession(session: Stripe.Checkout.Session) {
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   return await syncStripeSubscription(subscription);
 }
+
+// Invoice History
+export interface InvoiceItem {
+  id: string;
+  number: string;
+  amount: number;
+  currency: string;
+  status: Stripe.Invoice.Status;
+  createdAt: Date;
+  dueDate: Date | null;
+  paidAt: Date | null;
+  invoicePdf: string | null;
+  invoiceUrl: string | null;
+  description: string | null;
+}
+
+export async function getCustomerInvoices(
+  stripeCustomerId: string,
+  options?: { limit?: number; startingAfter?: string }
+): Promise<{ invoices: InvoiceItem[]; hasMore: boolean }> {
+  const limit = options?.limit ?? 10;
+  
+  const invoices = await stripe.invoices.list({
+    customer: stripeCustomerId,
+    limit: limit + 1,
+    starting_after: options?.startingAfter,
+  });
+
+  const hasMore = invoices.data.length > limit;
+  const data = hasMore ? invoices.data.slice(0, limit) : invoices.data;
+
+  return {
+    invoices: data.map((invoice) => ({
+      id: invoice.id,
+      number: invoice.number ?? '',
+      amount: invoice.amount_paid ?? invoice.total,
+      currency: invoice.currency.toUpperCase(),
+      status: invoice.status ?? 'draft',
+      createdAt: new Date(invoice.created * 1000),
+      dueDate: invoice.due_date ? new Date(invoice.due_date * 1000) : null,
+      paidAt: invoice.status_transitions?.paid_at 
+        ? new Date(invoice.status_transitions.paid_at * 1000) 
+        : null,
+      invoicePdf: invoice.invoice_pdf,
+      invoiceUrl: invoice.hosted_invoice_url,
+      description: invoice.description ?? invoice.lines.data[0]?.description ?? null,
+    })),
+    hasMore,
+  };
+}
+
+export async function getCustomerUpcomingInvoice(stripeCustomerId: string) {
+  try {
+    const invoice = await stripe.invoices.retrieveUpcoming({
+      customer: stripeCustomerId,
+    });
+
+    return {
+      amount: invoice.amount_remaining,
+      currency: invoice.currency.toUpperCase(),
+      nextPaymentAttempt: invoice.next_payment_attempt 
+        ? new Date(invoice.next_payment_attempt * 1000) 
+        : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Trial Period Support
+export async function createPremiumCheckoutWithTrial(
+  profile: BillingProfile,
+  origin: string,
+  trialDays: number = 7
+) {
+  const existingSubscription = await getCurrentSubscriptionRecord(profile.id);
+
+  if (existingSubscription && existingSubscription.status && existingSubscriptionStatuses.includes(existingSubscription.status as Stripe.Subscription.Status)) {
+    throw new Error('User already has a subscription record that should be managed through billing portal.');
+  }
+
+  const customerId = await ensureStripeCustomer(profile);
+
+  return await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    customer: customerId,
+    line_items: [{ price: premiumPriceId, quantity: 1 }],
+    allow_promotion_codes: true,
+    success_url: `${origin}/pricing?checkout=success&trial=true`,
+    cancel_url: `${origin}/pricing?checkout=canceled`,
+    metadata: {
+      userId: String(profile.id),
+      ...(profile.supabaseUserId ? { supabaseUserId: profile.supabaseUserId } : {}),
+    },
+    subscription_data: {
+      trial_period_days: trialDays,
+      metadata: {
+        userId: String(profile.id),
+        ...(profile.supabaseUserId ? { supabaseUserId: profile.supabaseUserId } : {}),
+      },
+    },
+  });
+}

@@ -8,10 +8,12 @@ import {
   getForumCategories,
   getForumMemberProfile,
   getForumThreadById,
+  getNotificationPreferences,
   markBestAnswer,
   markNotificationsAsRead,
   reviewReport,
   toggleForumFollow,
+  updateNotificationPreferences,
   updateThreadState,
   updateUserModerationState,
 } from './forum';
@@ -281,6 +283,29 @@ export async function handleForumNotificationsAction(input: {
   viewerId: number;
   requestUrl: URL;
 }) {
+  const intent = String(input.formData.get('intent') || '');
+
+  // Handle preference updates
+  if (intent === 'update-preferences') {
+    const replyNotifications = input.formData.get('reply_notifications') === 'on';
+    const followNotifications = input.formData.get('follow_notifications') === 'on';
+    const bestAnswerNotifications = input.formData.get('best_answer_notifications') === 'on';
+    const reportNotifications = input.formData.get('report_notifications') === 'on';
+
+    await updateNotificationPreferences(input.viewerId, {
+      replyNotifications,
+      followNotifications,
+      bestAnswerNotifications,
+      reportNotifications,
+    });
+
+    return withFeedback(input.requestUrl.pathname, {
+      type: 'success',
+      message: 'Notification preferences updated.',
+    });
+  }
+
+  // Handle marking notifications as read
   const rawIds = input.formData.getAll('notification_id').map((value) => Number(value)).filter(Boolean);
   await markNotificationsAsRead(input.viewerId, rawIds.length > 0 ? rawIds : undefined);
 
