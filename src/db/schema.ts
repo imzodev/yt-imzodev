@@ -340,6 +340,20 @@ export const forumNotifications = pgTable('forum_notifications', {
   index('forum_notifications_is_read_idx').on(table.isRead),
 ]);
 
+// Notification Preferences table - User preferences for notification types
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  replyNotifications: boolean('reply_notifications').default(true), // Notify when someone replies to your thread
+  followNotifications: boolean('follow_notifications').default(true), // Notify when someone follows you
+  bestAnswerNotifications: boolean('best_answer_notifications').default(true), // Notify when your reply is marked as best answer
+  reportNotifications: boolean('report_notifications').default(true), // Notify moderators about new reports
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('notification_preferences_user_idx').on(table.userId),
+]);
+
 // Newsletter Subscriptions table
 export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   id: serial('id').primaryKey(),
@@ -413,6 +427,7 @@ export const schema = {
   forumFollows,
   forumReports,
   forumNotifications,
+  notificationPreferences,
   newsletterSubscriptions,
   labTools,
   userActivity,
@@ -472,6 +487,9 @@ export type NewForumReport = typeof forumReports.$inferInsert;
 
 export type ForumNotification = typeof forumNotifications.$inferSelect;
 export type NewForumNotification = typeof forumNotifications.$inferInsert;
+
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type NewNotificationPreference = typeof notificationPreferences.$inferInsert;
 
 export type NewsletterSubscription = typeof newsletterSubscriptions.$inferSelect;
 export type NewNewsletterSubscription = typeof newsletterSubscriptions.$inferInsert;

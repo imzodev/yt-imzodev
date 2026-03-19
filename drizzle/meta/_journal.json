@@ -29,6 +29,13 @@
       "when": 1772812451000,
       "tag": "0003_phase5_rls_policy_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772860000000,
+      "tag": "0004_notification_preferences",
+      "breakpoints": true
     }
   ]
 }
