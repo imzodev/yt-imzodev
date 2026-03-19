@@ -1,0 +1,141 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import { getSession } from '../../lib/server/auth';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro);
+const user = authResult?.user;
+
+const tools = [
+  {
+    name: 'Code Formatter',
+    description: 'Beautify and format code in multiple languages',
+    slug: 'code-formatter',
+    type: 'formatter',
+    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    </svg>`,
+    accessLevel: 'member',
+  },
+  {
+    name: 'Color Palette Generator',
+    description: 'Generate beautiful color palettes for your designs',
+    slug: 'color-palette',
+    type: 'generator',
+    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+    </svg>`,
+    accessLevel: 'member',
+  },
+  {
+    name: 'Regex Tester',
+    description: 'Test and debug regular expressions in real-time',
+    slug: 'regex-tester',
+    type: 'validator',
+    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>`,
+    accessLevel: 'member',
+  },
+  {
+    name: 'JSON Validator',
+    description: 'Validate and format JSON data instantly',
+    slug: 'json-validator',
+    type: 'validator',
+    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>`,
+    accessLevel: 'member',
+  },
+  {
+    name: 'Password Generator',
+    description: 'Create secure, random passwords',
+    slug: 'password-generator',
+    type: 'generator',
+    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+    </svg>`,
+    accessLevel: 'member',
+  },
+  {
+    name: 'Base64 Encoder/Decoder',
+    description: 'Encode and decode Base64 strings',
+    slug: 'base64',
+    type: 'converter',
+    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </svg>`,
+    accessLevel: 'member',
+  },
+];
+---
+
+<Layout title="Lab Tools - YouTube Community Portal">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold mb-4">Lab Tools</h1>
+        <p class="text-lg text-base-content/70 max-w-2xl mx-auto">
+          Interactive utilities to help with your development workflow
+        </p>
+      </div>
+
+      {!user && (
+        <div class="alert alert-info mb-8 max-w-2xl mx-auto">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p class="font-medium">Sign in to access all tools</p>
+            <p class="text-sm">Some tools are available for members only</p>
+          </div>
+          <a href="/login?redirect=/lab" class="btn btn-sm btn-primary">Sign In</a>
+        </div>
+      )}
+
+      <!-- Tools Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tools.map((tool) => (
+          <a 
+            href={`/lab/${tool.slug}`}
+            class="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow group"
+          >
+            <div class="card-body">
+              <div class="flex items-start justify-between">
+                <div class="text-primary group-hover:text-primary-focus transition-colors">
+                  <Fragment set:html={tool.icon} />
+                </div>
+                <span class={`badge badge-sm ${
+                  tool.accessLevel === 'public' ? 'badge-success' :
+                  tool.accessLevel === 'premium' ? 'badge-warning' :
+                  'badge-info'
+                }`}>
+                  {tool.accessLevel}
+                </span>
+              </div>
+              <h2 class="card-title mt-4">{tool.name}</h2>
+              <p class="text-base-content/70 text-sm">{tool.description}</p>
+              <div class="card-actions justify-end mt-4">
+                <span class="text-primary text-sm font-medium group-hover:underline">
+                  Open Tool →
+                </span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      <!-- Coming Soon -->
+      <div class="mt-12 text-center">
+        <p class="text-base-content/60 text-sm">
+          More tools coming soon! Have a suggestion? 
+          <a href="/forum" class="link link-primary">Let us know in the forum</a>
+        </p>
+      </div>
+    </div>
+  </main>
+</Layout>

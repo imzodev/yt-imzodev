@@ -1,0 +1,293 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import { getSession } from '../../lib/server/auth';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro);
+const user = authResult?.user;
+
+const languages = [
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'json', label: 'JSON' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'python', label: 'Python' },
+];
+---
+
+<Layout title="Code Formatter - Lab Tools">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <a href="/lab" class="btn btn-ghost btn-sm mb-4">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Lab
+        </a>
+        <h1 class="text-3xl font-bold">Code Formatter</h1>
+        <p class="text-base-content/70 mt-2">Beautify and format your code in multiple languages</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Input -->
+        <div class="card bg-base-100 shadow-lg">
+          <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="card-title">Input</h2>
+              <select id="language" class="select select-bordered select-sm">
+                {languages.map(lang => (
+                  <option value={lang.value}>{lang.label}</option>
+                ))}
+              </select>
+            </div>
+            <textarea 
+              id="input-code"
+              class="textarea textarea-bordered font-mono text-sm h-80 w-full"
+              placeholder="Paste your code here..."
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="card bg-base-100 shadow-lg">
+          <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="card-title">Output</h2>
+              <button id="copy-btn" class="btn btn-ghost btn-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copy
+              </button>
+            </div>
+            <textarea 
+              id="output-code"
+              class="textarea textarea-bordered font-mono text-sm h-80 w-full bg-base-200"
+              readonly
+              placeholder="Formatted code will appear here..."
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex justify-center gap-4 mt-6">
+        <button id="format-btn" class="btn btn-primary btn-lg">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Format Code
+        </button>
+        <button id="clear-btn" class="btn btn-ghost btn-lg">
+          Clear
+        </button>
+      </div>
+
+      <!-- Options -->
+      <div class="card bg-base-100 shadow-lg mt-6">
+        <div class="card-body">
+          <h3 class="font-semibold mb-4">Formatting Options</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Indent Size</span>
+                <select id="indent-size" class="select select-bordered select-sm">
+                  <option value="2">2 spaces</option>
+                  <option value="4" selected>4 spaces</option>
+                  <option value="tab">Tab</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Use Tabs</span>
+                <input type="checkbox" id="use-tabs" class="toggle toggle-primary" />
+              </label>
+            </div>
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Minify</span>
+                <input type="checkbox" id="minify" class="toggle toggle-primary" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const inputCode = document.getElementById('input-code') as HTMLTextAreaElement;
+    const outputCode = document.getElementById('output-code') as HTMLTextAreaElement;
+    const languageSelect = document.getElementById('language') as HTMLSelectElement;
+    const formatBtn = document.getElementById('format-btn') as HTMLButtonElement;
+    const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
+    const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement;
+    const indentSizeSelect = document.getElementById('indent-size') as HTMLSelectElement;
+    const useTabsCheckbox = document.getElementById('use-tabs') as HTMLInputElement;
+    const minifyCheckbox = document.getElementById('minify') as HTMLInputElement;
+
+    function getIndent(): string {
+      if (useTabsCheckbox.checked) return '\t';
+      const size = parseInt(indentSizeSelect.value);
+      return ' '.repeat(size);
+    }
+
+    function formatJSON(code: string, indent: string): string {
+      try {
+        const parsed = JSON.parse(code);
+        return JSON.stringify(parsed, null, indent);
+      } catch (e) {
+        return `Error: Invalid JSON - ${(e as Error).message}`;
+      }
+    }
+
+    function formatHTML(code: string, indent: string): string {
+      let formatted = '';
+      let indentLevel = 0;
+      const lines = code.split(/>\s*</);
+      
+      lines.forEach((line, i) => {
+        if (i > 0) line = '<' + line;
+        if (i < lines.length - 1) line = line + '>';
+        
+        line = line.trim();
+        if (!line) return;
+        
+        // Decrease indent for closing tags
+        if (line.match(/^<\/\w/)) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+        
+        formatted += indent.repeat(indentLevel) + line + '\n';
+        
+        // Increase indent after opening tags (not self-closing)
+        if (line.match(/^<\w[^>]*[^\/]>$/)) {
+          indentLevel++;
+        }
+      });
+      
+      return formatted.trim();
+    }
+
+    function formatCSS(code: string, indent: string): string {
+      // Simple CSS formatter
+      return code
+        .replace(/\s*{\s*/g, ' {\n')
+        .replace(/;\s*/g, ';\n')
+        .replace(/\s*}\s*/g, '\n}\n')
+        .split('\n')
+        .map(line => {
+          line = line.trim();
+          if (line.endsWith('{') || line.endsWith('}')) return line;
+          if (line.includes(':')) return indent + line;
+          return line;
+        })
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n');
+    }
+
+    function formatJavaScript(code: string, indent: string): string {
+      // Basic JS formatter - add proper indentation
+      let formatted = '';
+      let indentLevel = 0;
+      const tokens = code.split(/([{};\n])/);
+      
+      tokens.forEach(token => {
+        if (token === '{') {
+          formatted += ' {\n';
+          indentLevel++;
+        } else if (token === '}') {
+          indentLevel = Math.max(0, indentLevel - 1);
+          formatted += indent.repeat(indentLevel) + '}\n';
+        } else if (token === ';') {
+          formatted += ';\n';
+        } else if (token === '\n') {
+          // Skip extra newlines
+        } else if (token.trim()) {
+          formatted += indent.repeat(indentLevel) + token.trim();
+        }
+      });
+      
+      return formatted.trim();
+    }
+
+    function minifyCode(code: string, language: string): string {
+      // Basic minification
+      return code
+        .replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments
+        .replace(/\/\/.*$/gm, '') // Remove single-line comments
+        .replace(/\s+/g, ' ') // Collapse whitespace
+        .replace(/\s*([{};:,])\s*/g, '$1') // Remove space around symbols
+        .trim();
+    }
+
+    formatBtn.addEventListener('click', () => {
+      const code = inputCode.value;
+      const language = languageSelect.value;
+      const indent = getIndent();
+      const minify = minifyCheckbox.checked;
+
+      let result: string;
+
+      if (minify) {
+        result = minifyCode(code, language);
+      } else {
+        switch (language) {
+          case 'json':
+            result = formatJSON(code, indent);
+            break;
+          case 'html':
+            result = formatHTML(code, indent);
+            break;
+          case 'css':
+            result = formatCSS(code, indent);
+            break;
+          case 'javascript':
+          case 'typescript':
+            result = formatJavaScript(code, indent);
+            break;
+          default:
+            result = code;
+        }
+      }
+
+      outputCode.value = result;
+    });
+
+    clearBtn.addEventListener('click', () => {
+      inputCode.value = '';
+      outputCode.value = '';
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(outputCode.value);
+        copyBtn.innerHTML = `
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          Copied!
+        `;
+        setTimeout(() => {
+          copyBtn.innerHTML = `
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy
+          `;
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    });
+  </script>
+</Layout>
