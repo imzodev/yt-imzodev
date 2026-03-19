@@ -1,0 +1,177 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import Alert from '../../components/ui/Alert.astro';
+import { getSession } from '../../lib/server/auth';
+import { getBillingProfileBySupabaseUserId, getCustomerInvoices, getCurrentSubscriptionRecord } from '../../lib/server/billing';
+
+export const prerender = false;
+
+const authResult = await getSession(Astro, { requireAuth: true });
+if (authResult instanceof Response) return authResult;
+const { user } = authResult;
+
+const profile = await getBillingProfileBySupabaseUserId(user!.id);
+
+if (!profile || !profile.stripeCustomerId) {
+  return Astro.redirect('/profile?billing=no-history');
+}
+
+const subscription = await getCurrentSubscriptionRecord(profile.id);
+const { invoices } = await getCustomerInvoices(profile.stripeCustomerId, { limit: 20 });
+
+const formatCurrency = (amount: number, currency: string) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+  }).format(amount / 100);
+};
+
+const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+};
+
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'paid':
+      return 'badge-success';
+    case 'open':
+      return 'badge-warning';
+    case 'void':
+    case 'uncollectible':
+      return 'badge-error';
+    default:
+      return 'badge-ghost';
+  }
+};
+---
+
+<Layout title="Invoice History - YouTube Community Portal">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 mt-16">
+    <div class="max-w-4xl mx-auto space-y-6">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-base-content">Invoice History</h1>
+          <p class="text-base-content/70 mt-1">View and download your past invoices</p>
+        </div>
+        <a href="/profile" class="btn btn-outline">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          Back to Profile
+        </a>
+      </div>
+
+      <!-- Current Subscription -->
+      {subscription && (
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="card-title text-lg">Current Subscription</h2>
+                <p class="text-base-content/70">
+                  Status: <span class={`badge badge-sm ${subscription.status === 'active' ? 'badge-success' : subscription.status === 'trialing' ? 'badge-info' : 'badge-warning'}`}>
+                    {subscription.status}
+                  </span>
+                </p>
+                {subscription.currentPeriodEnd && (
+                  <p class="text-sm text-base-content/60 mt-1">
+                    {subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'}: {formatDate(subscription.currentPeriodEnd)}
+                  </p>
+                )}
+              </div>
+              <form method="POST" action="/api/billing/portal">
+                <input type="hidden" name="csrf_token" value={Astro.cookies.get('csrf_token')?.value ?? ''} />
+                <button type="submit" class="btn btn-primary btn-sm">Manage</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <!-- Invoice List -->
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h2 class="card-title text-xl border-b border-base-300 pb-4">Past Invoices</h2>
+          
+          {invoices.length > 0 ? (
+            <div class="overflow-x-auto">
+              <table class="table table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((invoice) => (
+                    <tr>
+                      <td class="font-mono text-sm">{invoice.number || `#${invoice.id.slice(-8)}`}</td>
+                      <td>{formatDate(invoice.createdAt)}</td>
+                      <td class="font-semibold">{formatCurrency(invoice.amount, invoice.currency)}</td>
+                      <td>
+                        <span class={`badge badge-sm ${getStatusBadge(invoice.status)}`}>
+                          {invoice.status}
+                        </span>
+                      </td>
+                      <td class="text-right">
+                        <div class="flex gap-2 justify-end">
+                          {invoice.invoicePdf && (
+                            <a 
+                              href={invoice.invoicePdf} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              class="btn btn-ghost btn-xs"
+                            >
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                              </svg>
+                              PDF
+                            </a>
+                          )}
+                          {invoice.invoiceUrl && (
+                            <a 
+                              href={invoice.invoiceUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              class="btn btn-ghost btn-xs"
+                            >
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                              </svg>
+                              View
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div class="text-center py-12">
+              <svg class="w-16 h-16 text-base-content/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-base-content/70">No invoices yet</h3>
+              <p class="text-base-content/50 mt-1">Your invoice history will appear here once you make a payment.</p>
+              <a href="/pricing" class="btn btn-primary btn-sm mt-4">View Plans</a>
+            </div>
+          )}
+        </div>
+      </div>
+
+    </div>
+  </main>
+</Layout>
