@@ -170,7 +170,7 @@
 
 ---
 
-## 🔄 Phase 6: Additional Features (50% Complete)
+## 🔄 Phase 6: Additional Features (55% Complete)
 
 ### 📧 Newsletter System
 - [x] **Email Templates** - Professional newsletter designs
@@ -187,7 +187,7 @@
 ### 🔬 Lab Tools (Interactive Utilities) ✨ NEW
 - [x] **Code Formatter** - Online code beautifier
 - [x] **Color Palette Generator** - Design tool for developers
-- [ ] **Regex Tester** - Regular expression testing tool
+- [x] **Regex Tester** - Regular expression testing tool
 - [ ] **JSON Validator** - JSON formatting and validation
 - [ ] **URL Shortener** - Custom link shortening
 - [ ] **Password Generator** - Secure password creation tool
