@@ -255,3 +255,6 @@ export async function updateUserModerationState(input: { userId: number; isActiv
 
   await db.update(users).set({ isActive: input.isActive, updatedAt: new Date() }).where(eq(users.id, input.userId));
 }
+
+// Re-export notification preference functions from forum-side-effects
+export { getNotificationPreferences, getOrCreateNotificationPreferences, updateNotificationPreferences } from './forum-side-effects';

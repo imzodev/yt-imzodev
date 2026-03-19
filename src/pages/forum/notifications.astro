@@ -4,7 +4,7 @@ import Navbar from '../../components/Navbar.astro';
 import Alert from '../../components/ui/Alert.astro';
 import { getSession } from '../../lib/server/auth';
 import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
-import { getForumNotifications, getViewerBySupabaseId } from '../../lib/server/forum';
+import { getForumNotifications, getNotificationPreferences, getViewerBySupabaseId } from '../../lib/server/forum';
 
 export const prerender = false;
 
@@ -45,7 +45,10 @@ if (Astro.request.method === 'POST') {
   }
 }
 
-const notifications = await getForumNotifications(viewer.id);
+const [notifications, preferences] = await Promise.all([
+  getForumNotifications(viewer.id),
+  getNotificationPreferences(viewer.id),
+]);
 ---
 
 <Layout title="Forum Notifications - YouTube Community Portal">
@@ -72,6 +75,79 @@ const notifications = await getForumNotifications(viewer.id);
       {feedbackMessage && feedbackType && (
         <Alert type={feedbackType} message={feedbackMessage} />
       )}
+
+      <!-- Notification Preferences -->
+      <section class="card bg-base-100 shadow-lg">
+        <div class="card-body gap-5">
+          <div class="flex items-center justify-between">
+            <h2 class="card-title text-2xl">Notification Preferences</h2>
+            <span class="badge badge-ghost">Configure what you want to be notified about</span>
+          </div>
+
+          <form method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value={csrfToken} />
+            <input type="hidden" name="intent" value="update-preferences" />
+            
+            <div class="grid gap-4 md:grid-cols-2">
+              <label class="flex cursor-pointer items-center gap-4 rounded-2xl border border-base-300 p-4 transition hover:border-primary">
+                <input 
+                  type="checkbox" 
+                  name="reply_notifications" 
+                  class="checkbox checkbox-primary" 
+                  checked={preferences?.replyNotifications ?? true}
+                />
+                <div>
+                  <h3 class="font-semibold text-base-content">Reply Notifications</h3>
+                  <p class="text-sm text-base-content/70">Get notified when someone replies to your threads</p>
+                </div>
+              </label>
+
+              <label class="flex cursor-pointer items-center gap-4 rounded-2xl border border-base-300 p-4 transition hover:border-primary">
+                <input 
+                  type="checkbox" 
+                  name="follow_notifications" 
+                  class="checkbox checkbox-primary" 
+                  checked={preferences?.followNotifications ?? true}
+                />
+                <div>
+                  <h3 class="font-semibold text-base-content">Follow Notifications</h3>
+                  <p class="text-sm text-base-content/70">Get notified when someone follows you</p>
+                </div>
+              </label>
+
+              <label class="flex cursor-pointer items-center gap-4 rounded-2xl border border-base-300 p-4 transition hover:border-primary">
+                <input 
+                  type="checkbox" 
+                  name="best_answer_notifications" 
+                  class="checkbox checkbox-primary" 
+                  checked={preferences?.bestAnswerNotifications ?? true}
+                />
+                <div>
+                  <h3 class="font-semibold text-base-content">Best Answer Notifications</h3>
+                  <p class="text-sm text-base-content/70">Get notified when your reply is marked as best answer</p>
+                </div>
+              </label>
+
+              <label class="flex cursor-pointer items-center gap-4 rounded-2xl border border-base-300 p-4 transition hover:border-primary">
+                <input 
+                  type="checkbox" 
+                  name="report_notifications" 
+                  class="checkbox checkbox-primary" 
+                  checked={preferences?.reportNotifications ?? true}
+                />
+                <div>
+                  <h3 class="font-semibold text-base-content">Report Notifications</h3>
+                  <p class="text-sm text-base-content/70">Get notified about moderation reports (moderators only)</p>
+                </div>
+              </label>
+            </div>
+
+            <div class="flex justify-end">
+              <button type="submit" class="btn btn-secondary">Save Preferences</button>
+            </div>
+          </form>
+        </div>
+      </section>
 
       <section class="card bg-base-100 shadow-lg">
         <div class="card-body gap-5">

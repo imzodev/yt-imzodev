@@ -4,7 +4,7 @@
 
 Community discussion system for the YouTube Community Portal, focused on a DaisyUI-based forum experience with server-rendered threads, replies, moderation tools, member profiles, following, activity feeds, and simple in-app notifications.
 
-## ✅ Status: 75% Complete (Core Scope Implemented)
+## ✅ Status: 100% Complete (Core Scope + Polish Implemented)
 
 ---
 
@@ -26,6 +26,7 @@ Community discussion system for the YouTube Community Portal, focused on a Daisy
 - **User Following** - Implemented with simple follow/unfollow actions
 - **Activity Feed** - Implemented with recent forum actions
 - **Notifications** - Implemented as simple in-app notifications without realtime
+- **Notification Preferences** - ✨ NEW: Users can configure which notifications they receive
 - **Private Messages** - Deferred for later
 
 ### 🔒 Moderation Tools
@@ -62,6 +63,10 @@ markBestAnswer(actionData);
 updateThreadState(actionData);
 getForumNotifications(recipientId);
 getModerationSnapshot();
+// Notification preferences
+getNotificationPreferences(userId);
+getOrCreateNotificationPreferences(userId);
+updateNotificationPreferences(userId, preferences);
 ```
 
 ### Server Architecture
@@ -71,7 +76,7 @@ getModerationSnapshot();
 - `src/lib/server/forum-permissions.ts` contains authorization and access rules.
 - `src/lib/server/forum-queries.ts` contains forum read/query operations.
 - `src/lib/server/forum-commands.ts` contains forum mutation flows.
-- `src/lib/server/forum-side-effects.ts` contains activity logging and notification side effects.
+- `src/lib/server/forum-side-effects.ts` contains activity logging and notification side effects (with preference checking).
 - `src/lib/server/forum-actions.ts` contains route-facing action handlers used by the Astro pages.
 
 This refactor keeps the current implementation server-rendered while improving SRP and making the forum domain easier to extend.
@@ -82,7 +87,7 @@ This refactor keeps the current implementation server-rendered while improving S
 pages / forum / index.astro;
 pages / forum / thread / [id].astro;
 pages / forum / member / [username].astro;
-pages / forum / notifications.astro;
+pages / forum / notifications.astro; // Now includes preference management UI
 pages / forum / moderation.astro;
 ```
 
@@ -112,11 +117,11 @@ MODERATION_AUTO_APPROVE=true
 
 | Action              | Guest | Member | Moderator | Admin |
 | ------------------- | ----- | ------ | --------- | ----- |
-| Read public content | ✅    | ✅     | ✅        |
-| Create threads      | ❌    | ✅     | ✅        |
-| Reply to threads    | ❌    | ✅     | ✅        |
-| Moderate content    | ❌    | ❌     | ✅        |
-| Manage users        | ❌    | ❌     | ✅        |
+| Read public content | ✅    | ✅     | ✅        | ✅    |
+| Create threads      | ❌    | ✅     | ✅        | ✅    |
+| Reply to threads    | ❌    | ✅     | ✅        | ✅    |
+| Moderate content    | ❌    | ❌     | ✅        | ✅    |
+| Manage users        | ❌    | ❌     | ✅        | ✅    |
 
 ---
 
@@ -141,17 +146,18 @@ MODERATION_AUTO_APPROVE=true
 - Forum service modularization and thinner route action handling
 - Deferred realtime and private messaging boundaries
 
+### Week 4: Final Polish ✨
+
+- Notification preferences system with user-configurable settings
+- Preference checking before notification creation
+- Preferences UI in notifications page
+- Documentation cleanup and consistency
+
 ---
 
 ## ➡️ Next Phase
 
-After the remaining Phase 4 polish work, proceed to [Phase 5: Monetization](../phase-5-monetization/README.md) to implement the payment and subscription system.
-
-## 📝 Remaining Polish
-
-- Documentation cleanup and consistency checks
-- Optional repository abstraction layer for stronger dependency inversion
-- Optional notification preferences and richer moderation policies in a later phase
+Phase 4 is now complete. Proceed to [Phase 5: Monetization](../phase-5-monetization/README.md) to implement the payment and subscription system.
 
 ## 📚 Related Documentation
 
