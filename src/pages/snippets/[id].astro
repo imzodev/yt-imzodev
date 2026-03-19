@@ -1,9 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.astro';
+import PremiumGate from '../../components/PremiumGate.astro';
 import { supabase } from '../../lib/supabase';
 import { codeToHtml } from 'shiki';
 import { marked } from 'marked';
+import { checkContentAccess } from '../../lib/server/content-access';
 
 const { id } = Astro.params;
 
@@ -22,18 +24,24 @@ if (error || !snippet) {
   return Astro.redirect('/404');
 }
 
-// Generate highlighted code
+// Check content access based on snippet access level
+const contentAccess = await checkContentAccess(Astro, (snippet.access_level as 'public' | 'member' | 'premium') || 'public');
+const { hasAccess, isAuthenticated, isPremium, userTier } = contentAccess;
+
+// Generate highlighted code (only if has access)
 let highlightedCode = '';
-try {
-  // Use shiki to highlight the code
-  highlightedCode = await codeToHtml(snippet.content, {
-    lang: snippet.language || 'typescript',
-    theme: 'github-dark'
-  });
-} catch (e) {
-  console.error("Failed to highlight code:", e);
-  // Fallback if shiki fails or language is unsupported
-  highlightedCode = `<pre><code>${snippet.content}</code></pre>`;
+if (hasAccess) {
+  try {
+    // Use shiki to highlight the code
+    highlightedCode = await codeToHtml(snippet.content, {
+      lang: snippet.language || 'typescript',
+      theme: 'github-dark'
+    });
+  } catch (e) {
+    console.error("Failed to highlight code:", e);
+    // Fallback if shiki fails or language is unsupported
+    highlightedCode = `<pre><code>${snippet.content}</code></pre>`;
+  }
 }
 
 // Parse markdown description if exists
@@ -41,6 +49,9 @@ let descriptionHtml = '';
 if (snippet.description) {
   descriptionHtml = await marked.parse(snippet.description);
 }
+
+// Check if snippet is locked
+const isLocked = snippet.access_level === 'premium' && !hasAccess;
 ---
 
 <Layout title={`${snippet.title} - YouTube Community Portal`}>
@@ -55,7 +66,17 @@ if (snippet.description) {
           {snippet.category && (
             <li><a href={`/snippets?category=${snippet.category.slug}`}>{snippet.category.name}</a></li>
           )}
-          <li class="truncate max-w-xs">{snippet.title}</li>
+          <li class="truncate max-w-xs flex items-center gap-2">
+            {snippet.title}
+            {snippet.access_level === 'premium' && (
+              <span class="badge badge-secondary badge-sm gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5z" clip-rule="evenodd"></path>
+                </svg>
+                Premium
+              </span>
+            )}
+          </li>
         </ul>
       </div>
 
@@ -71,6 +92,12 @@ if (snippet.description) {
                 <span class="text-xs text-base-content/60 font-mono">
                   {snippet.type}
                 </span>
+                {snippet.access_level === 'premium' && (
+                  <span class="badge badge-secondary badge-sm">Premium</span>
+                )}
+                {snippet.access_level === 'member' && (
+                  <span class="badge badge-outline badge-sm">Members Only</span>
+                )}
               </div>
               <h1 class="text-2xl md:text-3xl font-bold text-base-content mb-2">
                 {snippet.title}
@@ -78,11 +105,13 @@ if (snippet.description) {
             </div>
             
             <div class="flex gap-2">
-              <button class="btn btn-circle btn-ghost" title="Like">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                </svg>
-              </button>
+              {hasAccess && (
+                <button id="copy-btn" class="btn btn-circle btn-ghost" title="Copy code">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
           
@@ -121,25 +150,58 @@ if (snippet.description) {
           <div class="p-6 md:px-8 bg-base-200/30 prose prose-sm max-w-none border-b border-base-300" set:html={descriptionHtml}></div>
         )}
 
-        <!-- Code Block -->
-        <div class="relative group bg-[#0d1117]">
-          <div class="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button 
-              id="copy-btn" 
-              class="btn btn-sm btn-square btn-neutral border border-base-300 shadow-sm bg-base-100 text-base-content"
-              data-code={snippet.content}
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-              </svg>
-            </button>
+        <!-- Code Block or Premium Gate -->
+        {isLocked ? (
+          <div class="p-8">
+            <!-- Blurred teaser -->
+            <div class="relative">
+              <div class="bg-[#0d1117] rounded-xl p-6 blur-sm select-none pointer-events-none opacity-50">
+                <pre class="text-sm text-base-content/50">
+                  <code>{snippet.content.slice(0, 200)}...</code>
+                </pre>
+              </div>
+              
+              <!-- Lock overlay -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="text-center">
+                  <svg class="w-16 h-16 text-base-content/40 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
+                  <p class="text-lg font-medium text-base-content/60">Premium snippet locked</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Premium Gate -->
+            <div class="mt-6">
+              <PremiumGate 
+                hasAccess={hasAccess}
+                isAuthenticated={isAuthenticated}
+                isPremium={isPremium}
+                contentType="snippet"
+              />
+            </div>
           </div>
-          
-          <div class="overflow-x-auto text-sm p-4 md:p-6 custom-scrollbar">
-            <!-- Render the highlighted code -->
-            <div set:html={highlightedCode} class="shiki-container" />
+        ) : (
+          <div class="relative group bg-[#0d1117]">
+            <div class="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                id="copy-btn" 
+                class="btn btn-sm btn-square btn-neutral border border-base-300 shadow-sm bg-base-100 text-base-content"
+                data-code={snippet.content}
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <div class="overflow-x-auto text-sm p-4 md:p-6 custom-scrollbar">
+              <!-- Render the highlighted code -->
+              <div set:html={highlightedCode} class="shiki-container" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
     </div>
