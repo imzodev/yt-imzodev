@@ -383,6 +383,8 @@ export const newsletterCampaigns = pgTable('newsletter_campaigns', {
   recipientCount: integer('recipient_count').default(0),
   openCount: integer('open_count').default(0),
   clickCount: integer('click_count').default(0),
+  bounceCount: integer('bounce_count').default(0),
+  unsubscribeCount: integer('unsubscribe_count').default(0),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
@@ -528,6 +530,12 @@ export type NewNotificationPreference = typeof notificationPreferences.$inferIns
 
 export type NewsletterSubscription = typeof newsletterSubscriptions.$inferSelect;
 export type NewNewsletterSubscription = typeof newsletterSubscriptions.$inferInsert;
+
+export type NewsletterCampaign = typeof newsletterCampaigns.$inferSelect;
+export type NewNewsletterCampaign = typeof newsletterCampaigns.$inferInsert;
+
+export type NewsletterAnalytics = typeof newsletterAnalytics.$inferSelect;
+export type NewNewsletterAnalytics = typeof newsletterAnalytics.$inferInsert;
 
 export type LabTool = typeof labTools.$inferSelect;
 export type NewLabTool = typeof labTools.$inferInsert;

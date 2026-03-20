@@ -1,11 +1,11 @@
 import type { APIRoute } from 'astro';
-import { trackClick } from '../../../../lib/server/newsletter-campaigns';
+import { trackClick, getSubscriberIdByEmail } from '../../../../lib/server/newsletter-campaigns';
 
 export const prerender = false;
 
 // Click tracking redirect
 export const GET: APIRoute = async ({ url, redirect }) => {
-  const campaignId = url.searchParams.get('c');
+  const campaignIdStr = url.searchParams.get('c');
   const email = url.searchParams.get('e');
   const targetUrl = url.searchParams.get('u');
 
@@ -20,11 +20,24 @@ export const GET: APIRoute = async ({ url, redirect }) => {
     return new Response('Invalid URL', { status: 400 });
   }
 
-  if (campaignId && email) {
-    // Track the click asynchronously (don't wait)
-    trackClick(campaignId, email, targetUrl).catch(err => {
-      console.error('[Newsletter] Error tracking click:', err);
-    });
+  if (campaignIdStr && email) {
+    const campaignId = parseInt(campaignIdStr, 10);
+    
+    if (!isNaN(campaignId)) {
+      // Get subscriber ID from email, then track the click asynchronously
+      (async () => {
+        try {
+          const subscriberId = await getSubscriberIdByEmail(email);
+          if (subscriberId) {
+            await trackClick(campaignId, subscriberId, targetUrl);
+          } else {
+            console.warn(`[Newsletter] Subscriber not found for email: ${email}`);
+          }
+        } catch (err) {
+          console.error('[Newsletter] Error tracking click:', err);
+        }
+      })();
+    }
   }
 
   // Redirect to target URL

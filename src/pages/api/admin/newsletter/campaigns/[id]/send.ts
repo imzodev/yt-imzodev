@@ -16,8 +16,16 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
 
   // TODO: Add admin role check
 
-  const campaignId = params.id as string;
-  if (!campaignId) {
+  const campaignIdStr = params.id as string;
+  if (!campaignIdStr) {
+    return new Response(JSON.stringify({ error: 'Invalid campaign ID' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const campaignId = parseInt(campaignIdStr, 10);
+  if (isNaN(campaignId)) {
     return new Response(JSON.stringify({ error: 'Invalid campaign ID' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },

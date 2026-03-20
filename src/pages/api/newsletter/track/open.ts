@@ -1,18 +1,31 @@
 import type { APIRoute } from 'astro';
-import { trackOpen } from '../../../../lib/server/newsletter-campaigns';
+import { trackOpen, getSubscriberIdByEmail } from '../../../../lib/server/newsletter-campaigns';
 
 export const prerender = false;
 
 // Tracking pixel for email opens
 export const GET: APIRoute = async ({ url }) => {
-  const campaignId = url.searchParams.get('c');
+  const campaignIdStr = url.searchParams.get('c');
   const email = url.searchParams.get('e');
 
-  if (campaignId && email) {
-    // Track the open asynchronously (don't wait)
-    trackOpen(campaignId, email).catch(err => {
-      console.error('[Newsletter] Error tracking open:', err);
-    });
+  if (campaignIdStr && email) {
+    const campaignId = parseInt(campaignIdStr, 10);
+    
+    if (!isNaN(campaignId)) {
+      // Get subscriber ID from email, then track the open asynchronously
+      (async () => {
+        try {
+          const subscriberId = await getSubscriberIdByEmail(email);
+          if (subscriberId) {
+            await trackOpen(campaignId, subscriberId);
+          } else {
+            console.warn(`[Newsletter] Subscriber not found for email: ${email}`);
+          }
+        } catch (err) {
+          console.error('[Newsletter] Error tracking open:', err);
+        }
+      })();
+    }
   }
 
   // Return 1x1 transparent GIF

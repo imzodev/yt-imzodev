@@ -26,9 +26,16 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     }
 
     if (action === 'analytics') {
-      const campaignId = url.searchParams.get('campaignId');
-      if (!campaignId) {
+      const campaignIdStr = url.searchParams.get('campaignId');
+      if (!campaignIdStr) {
         return new Response(JSON.stringify({ error: 'Campaign ID required' }), { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const campaignId = parseInt(campaignIdStr, 10);
+      if (isNaN(campaignId)) {
+        return new Response(JSON.stringify({ error: 'Invalid Campaign ID' }), { 
           status: 400,
           headers: { 'Content-Type': 'application/json' },
         });
@@ -70,6 +77,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const formData = await request.formData();
     const subject = formData.get('subject') as string;
     const content = formData.get('content') as string;
+    const template = (formData.get('template') as string) || 'default';
     const scheduledAtStr = formData.get('scheduled_at') as string;
 
     if (!subject || !content) {
@@ -80,7 +88,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const scheduledAt = scheduledAtStr ? new Date(scheduledAtStr) : undefined;
-    const campaign = await createCampaign(subject, content, content, scheduledAt);
+    const campaign = await createCampaign(subject, content, template, scheduledAt);
 
     return new Response(JSON.stringify({
       success: true,
