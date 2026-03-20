@@ -1,0 +1,278 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+---
+
+<Layout title="Regex Tester - Lab Tools">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <a href="/lab" class="btn btn-ghost btn-sm mb-4">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Lab
+        </a>
+        <h1 class="text-3xl font-bold">Regex Tester</h1>
+        <p class="text-base-content/70 mt-2">Test and debug regular expressions in real-time</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Regex Input -->
+        <div class="space-y-6">
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title">Regular Expression</h2>
+              <div class="flex gap-2">
+                <span class="text-2xl text-primary font-bold">/</span>
+                <input 
+                  type="text" 
+                  id="regex-pattern"
+                  class="input input-bordered flex-1 font-mono"
+                  placeholder="Enter your regex pattern..."
+                />
+                <span class="text-2xl text-primary font-bold">/</span>
+                <input 
+                  type="text" 
+                  id="regex-flags"
+                  class="input input-bordered w-20 font-mono"
+                  placeholder="gi"
+                  value="g"
+                />
+              </div>
+              <div class="flex flex-wrap gap-2 mt-4">
+                <label class="label cursor-pointer gap-2">
+                  <input type="checkbox" class="checkbox checkbox-sm" id="flag-g" checked />
+                  <span class="label-text">Global (g)</span>
+                </label>
+                <label class="label cursor-pointer gap-2">
+                  <input type="checkbox" class="checkbox checkbox-sm" id="flag-i" />
+                  <span class="label-text">Case insensitive (i)</span>
+                </label>
+                <label class="label cursor-pointer gap-2">
+                  <input type="checkbox" class="checkbox checkbox-sm" id="flag-m" />
+                  <span class="label-text">Multiline (m)</span>
+                </label>
+                <label class="label cursor-pointer gap-2">
+                  <input type="checkbox" class="checkbox checkbox-sm" id="flag-s" />
+                  <span class="label-text">Dotall (s)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Test String -->
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title">Test String</h2>
+              <textarea 
+                id="test-string"
+                class="textarea textarea-bordered font-mono text-sm h-48 w-full"
+                placeholder="Enter the text to test against..."
+              >Hello World!
+This is a test string with numbers: 123, 456, 789
+Email: test@example.com
+Phone: (555) 123-4567
+URL: https://example.com/path?query=value</textarea>
+            </div>
+          </div>
+
+          <!-- Quick Examples -->
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title">Quick Examples</h2>
+              <div class="flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-ghost example-btn" data-pattern="\d+" data-flags="g">Numbers</button>
+                <button class="btn btn-sm btn-ghost example-btn" data-pattern="[a-zA-Z]+" data-flags="g">Words</button>
+                <button class="btn btn-sm btn-ghost example-btn" data-pattern="[\w.-]+@[\w.-]+\.\w+" data-flags="g">Email</button>
+                <button class="btn btn-sm btn-ghost example-btn" data-pattern="https?:\/\/[^\s]+" data-flags="g">URL</button>
+                <button class="btn btn-sm btn-ghost example-btn" data-pattern="(\(\d{3}\)\s?|\d{3}[-.]?)\d{3}[-.]?\d{4}" data-flags="g">Phone</button>
+                <button class="btn btn-sm btn-ghost example-btn" data-pattern="^\w+" data-flags="gm">First word</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="space-y-6">
+          <!-- Status -->
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <div class="flex items-center justify-between">
+                <h2 class="card-title">Results</h2>
+                <div id="status-badge" class="badge badge-ghost">Waiting for input</div>
+              </div>
+              <div id="error-message" class="alert alert-error hidden"></div>
+              <div id="match-count" class="text-lg font-semibold mt-2"></div>
+            </div>
+          </div>
+
+          <!-- Matches -->
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title">Matches</h2>
+              <div id="matches-list" class="space-y-2 max-h-64 overflow-y-auto">
+                <p class="text-base-content/70">No matches yet</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Explanation -->
+          <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+              <h2 class="card-title">Explanation</h2>
+              <div id="explanation" class="text-sm space-y-1">
+                <p class="text-base-content/70">Enter a regex pattern to see explanation</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const patternInput = document.getElementById('regex-pattern') as HTMLInputElement;
+    const flagsInput = document.getElementById('regex-flags') as HTMLInputElement;
+    const testString = document.getElementById('test-string') as HTMLTextAreaElement;
+    const statusBadge = document.getElementById('status-badge') as HTMLDivElement;
+    const errorMessage = document.getElementById('error-message') as HTMLDivElement;
+    const matchCount = document.getElementById('match-count') as HTMLDivElement;
+    const matchesList = document.getElementById('matches-list') as HTMLDivElement;
+    const explanation = document.getElementById('explanation') as HTMLDivElement;
+
+    const flagCheckboxes = {
+      g: document.getElementById('flag-g') as HTMLInputElement,
+      i: document.getElementById('flag-i') as HTMLInputElement,
+      m: document.getElementById('flag-m') as HTMLInputElement,
+      s: document.getElementById('flag-s') as HTMLInputElement,
+    };
+
+    function updateFlags() {
+      let flags = '';
+      if (flagCheckboxes.g.checked) flags += 'g';
+      if (flagCheckboxes.i.checked) flags += 'i';
+      if (flagCheckboxes.m.checked) flags += 'm';
+      if (flagCheckboxes.s.checked) flags += 's';
+      flagsInput.value = flags;
+      testRegex();
+    }
+
+    function testRegex() {
+      const pattern = patternInput.value;
+      const flags = flagsInput.value;
+      const text = testString.value;
+
+      if (!pattern) {
+        statusBadge.className = 'badge badge-ghost';
+        statusBadge.textContent = 'Waiting for input';
+        errorMessage.classList.add('hidden');
+        matchCount.textContent = '';
+        matchesList.innerHTML = '<p class="text-base-content/70">No matches yet</p>';
+        explanation.innerHTML = '<p class="text-base-content/70">Enter a regex pattern to see explanation</p>';
+        return;
+      }
+
+      try {
+        const regex = new RegExp(pattern, flags);
+        const matches = text.match(regex);
+        
+        statusBadge.className = 'badge badge-success';
+        statusBadge.textContent = 'Valid regex';
+        errorMessage.classList.add('hidden');
+
+        if (matches) {
+          matchCount.textContent = `${matches.length} match${matches.length !== 1 ? 'es' : ''} found`;
+          matchesList.innerHTML = matches.map((match, i) => `
+            <div class="flex items-center gap-2 p-2 bg-base-200 rounded">
+              <span class="badge badge-sm">${i + 1}</span>
+              <code class="font-mono text-sm flex-1">${escapeHtml(match)}</code>
+              <button class="btn btn-xs btn-ghost copy-match" data-match="${escapeHtml(match)}">Copy</button>
+            </div>
+          `).join('');
+        } else {
+          matchCount.textContent = 'No matches found';
+          matchesList.innerHTML = '<p class="text-base-content/70">No matches found</p>';
+        }
+
+        // Generate explanation
+        explainRegex(pattern);
+      } catch (e) {
+        statusBadge.className = 'badge badge-error';
+        statusBadge.textContent = 'Invalid regex';
+        errorMessage.classList.remove('hidden');
+        errorMessage.textContent = (e as Error).message;
+        matchCount.textContent = '';
+        matchesList.innerHTML = '<p class="text-base-content/70">Fix regex errors to see matches</p>';
+      }
+    }
+
+    function escapeHtml(text: string): string {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function explainRegex(pattern: string): void {
+      const parts: string[] = [];
+      
+      // Common regex tokens explanation
+      const tokens: [RegExp, string][] = [
+        [/\\d/g, '<code>\\d</code> - Any digit (0-9)'],
+        [/\\D/g, '<code>\\D</code> - Any non-digit'],
+        [/\\w/g, '<code>\\w</code> - Word character (a-z, A-Z, 0-9, _)'],
+        [/\\W/g, '<code>\\W</code> - Non-word character'],
+        [/\\s/g, '<code>\\s</code> - Whitespace'],
+        [/\\S/g, '<code>\\S</code> - Non-whitespace'],
+        [/\./g, '<code>.</code> - Any character (except newline)'],
+        [/\+/g, '<code>+</code> - One or more'],
+        [/\*/g, '<code>*</code> - Zero or more'],
+        [/\?/g, '<code>?</code> - Zero or one (optional)'],
+        [/\^/g, '<code>^</code> - Start of string/line'],
+        [/\$/g, '<code>$</code> - End of string/line'],
+        [/\|/g, '<code>|</code> - Alternation (OR)'],
+        [/\(\)/g, '<code>()</code> - Capture group'],
+        [/\[\]/g, '<code>[]</code> - Character class'],
+        [/\{[0-9,]+\}/g, '<code>{n,m}</code> - Quantifier'],
+      ];
+
+      for (const [regex, desc] of tokens) {
+        if (regex.test(pattern)) {
+          parts.push(desc);
+        }
+      }
+
+      if (parts.length > 0) {
+        explanation.innerHTML = parts.map(p => `<p>${p}</p>`).join('');
+      } else {
+        explanation.innerHTML = '<p class="text-base-content/70">No special tokens detected</p>';
+      }
+    }
+
+    // Event listeners
+    patternInput.addEventListener('input', testRegex);
+    testString.addEventListener('input', testRegex);
+    Object.values(flagCheckboxes).forEach(cb => cb.addEventListener('change', updateFlags));
+
+    // Copy match buttons
+    matchesList.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('copy-match')) {
+        const match = target.dataset.match!;
+        await navigator.clipboard.writeText(match);
+        target.textContent = 'Copied!';
+        setTimeout(() => target.textContent = 'Copy', 1500);
+      }
+    });
+
+    // Example buttons
+    document.querySelectorAll('.example-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        patternInput.value = (btn as HTMLElement).dataset.pattern!;
+        updateFlags();
+      });
+    });
+  </script>
+</Layout>

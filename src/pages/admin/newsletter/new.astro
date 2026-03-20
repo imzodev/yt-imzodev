@@ -1,0 +1,115 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Navbar from '../../../components/Navbar.astro';
+import { getSession } from '../../../lib/server/auth';
+import { getCsrfToken } from '../../../lib/server/csrf';
+
+export const prerender = false;
+
+// Check if user is authenticated
+const authResult = await getSession(Astro);
+const user = authResult?.user;
+
+if (!user) {
+  return Astro.redirect('/login?redirect=/admin/newsletter/new');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+---
+
+<Layout title="Create Campaign - Newsletter Admin">
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <a href="/admin/newsletter" class="btn btn-ghost btn-sm mb-4">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Campaigns
+        </a>
+        <h1 class="text-3xl font-bold">Create Campaign</h1>
+        <p class="text-base-content/70 mt-2">Compose a new newsletter for your subscribers</p>
+      </div>
+
+      <form 
+        id="campaign-form" 
+        hx-post="/api/admin/newsletter/campaigns" 
+        hx-swap="innerHTML"
+        class="bg-base-100 shadow rounded-lg p-6 space-y-6"
+      >
+        <input type="hidden" name="csrf_token" value={csrfToken} />
+
+        <!-- Subject -->
+        <div>
+          <label class="label">
+            <span class="label-text font-medium">Subject Line</span>
+          </label>
+          <input 
+            type="text" 
+            name="subject" 
+            placeholder="Enter email subject..."
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <!-- Template -->
+        <div>
+          <label class="label">
+            <span class="label-text font-medium">Email Template</span>
+          </label>
+          <select name="template" class="select select-bordered w-full">
+            <option value="default">Default</option>
+            <option value="promotional">Promotional</option>
+            <option value="digest">Weekly Digest</option>
+            <option value="announcement">Announcement</option>
+          </select>
+        </div>
+
+        <!-- Content -->
+        <div>
+          <label class="label">
+            <span class="label-text font-medium">Email Content</span>
+            <span class="label-text-alt text-base-content/70">HTML supported</span>
+          </label>
+          <textarea 
+            name="content"
+            class="textarea textarea-bordered w-full h-64"
+            placeholder="Write your newsletter content here..."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Schedule -->
+        <div>
+          <label class="label">
+            <span class="label-text font-medium">Schedule (Optional)</span>
+          </label>
+          <input 
+            type="datetime-local" 
+            name="scheduled_at"
+            class="input input-bordered w-full"
+          />
+          <p class="text-sm text-base-content/70 mt-1">
+            Leave empty to save as draft
+          </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-4 pt-4 border-t border-base-300">
+          <button type="button" class="btn btn-ghost" onclick="history.back()">
+            Cancel
+          </button>
+          <button type="submit" name="action" value="draft" class="btn btn-outline">
+            Save Draft
+          </button>
+          <button type="submit" name="action" value="schedule" class="btn btn-primary">
+            Schedule Campaign
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+</Layout>
