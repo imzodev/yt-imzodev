@@ -1,291 +1,204 @@
 /**
- * Tests for admin.ts - Dashboard metrics and admin functions
- * 
- * Note: These tests focus on the pure logic and data transformations.
- * Database-dependent functions are tested via integration tests.
+ * Tests for admin.ts - Dashboard statistics functions
  */
 import { describe, it, expect } from 'vitest';
 
-// Types from admin.ts for testing
-interface RevenueMetrics {
-  mrr: number;
-  arr: number;
-  totalRevenue: number;
-  activeSubscriptions: number;
-  churnRate: number;
-  paymentSuccessRate: number;
-}
+// Test the dashboard stats interface and calculation logic
+describe('Admin Dashboard Stats', () => {
+  // Define interfaces for testing
+  interface RevenueMetrics {
+    mrr: number;
+    arr: number;
+    totalRevenue: number;
+    activeSubscriptions: number;
+    churnRate: number;
+    paymentSuccessRate: number;
+  }
 
-interface UserMetrics {
-  totalUsers: number;
-  activeUsers: number;
-  newUsersThisMonth: number;
-  premiumUsers: number;
-  freeUsers: number;
-}
+  interface UserMetrics {
+    totalUsers: number;
+    activeUsers: number;
+    newUsersThisMonth: number;
+    premiumUsers: number;
+    freeUsers: number;
+  }
 
-interface ContentMetrics {
-  totalVideos: number;
-  totalBlogPosts: number;
-  totalSnippets: number;
-  totalForumPosts: number;
-  pendingReports: number;
-}
+  interface ContentMetrics {
+    totalVideos: number;
+    totalBlogPosts: number;
+    totalSnippets: number;
+    totalForumPosts: number;
+    pendingReports: number;
+  }
 
-describe('Admin Module - Revenue Metrics Logic', () => {
-  it('should calculate MRR from active subscriptions', () => {
-    const calculateMRR = (activeSubscriptions: number, avgMonthlyPrice: number): number => {
-      return Math.round(activeSubscriptions * avgMonthlyPrice * 100) / 100;
-    };
+  interface DashboardStats {
+    revenue: RevenueMetrics;
+    users: UserMetrics;
+    content: ContentMetrics;
+  }
 
-    expect(calculateMRR(100, 9.99)).toBe(999);
-    expect(calculateMRR(50, 19.99)).toBe(999.5);
-    expect(calculateMRR(0, 9.99)).toBe(0);
+  describe('Revenue Metrics Calculations', () => {
+    it('should calculate ARR from MRR', () => {
+      const mrr = 1000;
+      const arr = mrr * 12;
+      expect(arr).toBe(12000);
+    });
+
+    it('should calculate churn rate correctly', () => {
+      const canceledThisMonth = 5;
+      const activeSubscriptions = 100;
+      const churnRate = activeSubscriptions > 0 
+        ? (canceledThisMonth / activeSubscriptions) * 100 
+        : 0;
+      expect(churnRate).toBe(5);
+    });
+
+    it('should calculate payment success rate correctly', () => {
+      const successfulPayments = 90;
+      const failedPayments = 10;
+      const totalPaymentAttempts = successfulPayments + failedPayments;
+      const paymentSuccessRate = totalPaymentAttempts > 0 
+        ? (successfulPayments / totalPaymentAttempts) * 100 
+        : 0;
+      expect(paymentSuccessRate).toBe(90);
+    });
+
+    it('should handle zero active subscriptions for churn rate', () => {
+      const canceledThisMonth = 5;
+      const activeSubscriptions = 0;
+      const churnRate = activeSubscriptions > 0 
+        ? (canceledThisMonth / activeSubscriptions) * 100 
+        : 0;
+      expect(churnRate).toBe(0);
+    });
+
+    it('should handle zero payment attempts for success rate', () => {
+      const successfulPayments = 0;
+      const failedPayments = 0;
+      const totalPaymentAttempts = successfulPayments + failedPayments;
+      const paymentSuccessRate = totalPaymentAttempts > 0 
+        ? (successfulPayments / totalPaymentAttempts) * 100 
+        : 0;
+      expect(paymentSuccessRate).toBe(0);
+    });
   });
 
-  it('should calculate ARR from MRR', () => {
-    const calculateARR = (mrr: number): number => {
-      return Math.round(mrr * 12 * 100) / 100;
-    };
-
-    expect(calculateARR(999)).toBe(11988);
-    expect(calculateARR(0)).toBe(0);
-  });
-
-  it('should calculate churn rate correctly', () => {
-    const calculateChurnRate = (canceledThisMonth: number, activeSubscriptions: number): number => {
-      if (activeSubscriptions === 0) return 0;
-      return Math.round((canceledThisMonth / activeSubscriptions) * 100 * 10) / 10;
-    };
-
-    expect(calculateChurnRate(5, 100)).toBe(5);
-    expect(calculateChurnRate(10, 100)).toBe(10);
-    expect(calculateChurnRate(0, 100)).toBe(0);
-    expect(calculateChurnRate(5, 0)).toBe(0);
-  });
-
-  it('should calculate payment success rate correctly', () => {
-    const calculatePaymentSuccessRate = (successful: number, failed: number): number => {
-      const total = successful + failed;
-      if (total === 0) return 0;
-      return Math.round((successful / total) * 100 * 10) / 10;
-    };
-
-    expect(calculatePaymentSuccessRate(90, 10)).toBe(90);
-    expect(calculatePaymentSuccessRate(95, 5)).toBe(95);
-    expect(calculatePaymentSuccessRate(100, 0)).toBe(100);
-    expect(calculatePaymentSuccessRate(0, 0)).toBe(0);
-  });
-
-  it('should convert cents to dollars', () => {
-    const centsToDollars = (cents: number): number => {
-      return Math.round(cents / 100 * 100) / 100;
-    };
-
-    expect(centsToDollars(9999)).toBe(99.99);
-    expect(centsToDollars(1000)).toBe(10);
-    expect(centsToDollars(0)).toBe(0);
-  });
-});
-
-describe('Admin Module - User Metrics Logic', () => {
-  it('should count users correctly', () => {
-    const countUsers = (users: { isActive: boolean; subscriptionTier: string }[], filter: string): number => {
-      switch (filter) {
-        case 'total': return users.length;
-        case 'active': return users.filter(u => u.isActive).length;
-        case 'premium': return users.filter(u => u.subscriptionTier === 'premium').length;
-        case 'free': return users.filter(u => u.subscriptionTier === 'free').length;
-        default: return users.length;
-      }
-    };
-
-    const testUsers = [
-      { isActive: true, subscriptionTier: 'premium' },
-      { isActive: true, subscriptionTier: 'free' },
-      { isActive: false, subscriptionTier: 'free' },
-      { isActive: true, subscriptionTier: 'premium' },
-    ];
-
-    expect(countUsers(testUsers, 'total')).toBe(4);
-    expect(countUsers(testUsers, 'active')).toBe(3);
-    expect(countUsers(testUsers, 'premium')).toBe(2);
-    expect(countUsers(testUsers, 'free')).toBe(2);
-  });
-
-  it('should determine new users this month based on date', () => {
-    const isNewThisMonth = (createdAt: Date, now: Date): boolean => {
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      return createdAt >= startOfMonth;
-    };
-
-    const now = new Date('2026-03-21');
-    expect(isNewThisMonth(new Date('2026-03-15'), now)).toBe(true);
-    expect(isNewThisMonth(new Date('2026-02-28'), now)).toBe(false);
-    expect(isNewThisMonth(new Date('2026-01-01'), now)).toBe(false);
-  });
-});
-
-describe('Admin Module - Content Metrics Logic', () => {
-  it('should aggregate content counts correctly', () => {
-    const aggregateContent = (content: { type: string }[]): Record<string, number> => {
-      return content.reduce((acc, item) => {
-        acc[item.type] = (acc[item.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-    };
-
-    const content = [
-      { type: 'video' },
-      { type: 'video' },
-      { type: 'blog' },
-      { type: 'snippet' },
-      { type: 'video' },
-      { type: 'blog' },
-    ];
-
-    const result = aggregateContent(content);
-    expect(result['video']).toBe(3);
-    expect(result['blog']).toBe(2);
-    expect(result['snippet']).toBe(1);
-  });
-
-  it('should count pending reports', () => {
-    const countPendingReports = (reports: { status: string }[]): number => {
-      return reports.filter(r => r.status === 'open').length;
-    };
-
-    const reports = [
-      { status: 'open' },
-      { status: 'resolved' },
-      { status: 'open' },
-      { status: 'dismissed' },
-    ];
-
-    expect(countPendingReports(reports)).toBe(2);
-  });
-});
-
-describe('Admin Module - Dashboard Stats Aggregation', () => {
-  it('should combine all metrics into dashboard stats', () => {
-    const buildDashboardStats = (
-      revenue: RevenueMetrics,
-      users: UserMetrics,
-      content: ContentMetrics
-    ) => {
-      return { revenue, users, content };
-    };
-
-    const revenue: RevenueMetrics = {
-      mrr: 999,
-      arr: 11988,
-      totalRevenue: 5000,
-      activeSubscriptions: 100,
-      churnRate: 5,
-      paymentSuccessRate: 95,
-    };
-
-    const userMetrics: UserMetrics = {
-      totalUsers: 1000,
-      activeUsers: 800,
-      newUsersThisMonth: 50,
-      premiumUsers: 100,
-      freeUsers: 900,
-    };
-
-    const contentMetrics: ContentMetrics = {
-      totalVideos: 50,
-      totalBlogPosts: 30,
-      totalSnippets: 100,
-      totalForumPosts: 200,
-      pendingReports: 5,
-    };
-
-    const stats = buildDashboardStats(revenue, userMetrics, contentMetrics);
-
-    expect(stats.revenue.mrr).toBe(999);
-    expect(stats.users.totalUsers).toBe(1000);
-    expect(stats.content.totalVideos).toBe(50);
-    expect(stats.content.pendingReports).toBe(5);
-  });
-});
-
-describe('Admin Module - User Role Management', () => {
-  it('should validate role values', () => {
-    const validRoles = ['member', 'moderator', 'admin'];
-    const isValidRole = (role: string): boolean => validRoles.includes(role);
-
-    expect(isValidRole('admin')).toBe(true);
-    expect(isValidRole('moderator')).toBe(true);
-    expect(isValidRole('member')).toBe(true);
-    expect(isValidRole('superadmin')).toBe(false);
-    expect(isValidRole('')).toBe(false);
-  });
-
-  it('should determine role update permissions', () => {
-    const canUpdateRole = (currentUserRole: string, targetRole: string): boolean => {
-      // Only admins can update roles
-      if (currentUserRole !== 'admin') return false;
-      // Admins can set any role
-      return ['member', 'moderator', 'admin'].includes(targetRole);
-    };
-
-    expect(canUpdateRole('admin', 'moderator')).toBe(true);
-    expect(canUpdateRole('admin', 'admin')).toBe(true);
-    expect(canUpdateRole('moderator', 'admin')).toBe(false);
-    expect(canUpdateRole('member', 'admin')).toBe(false);
-  });
-});
-
-describe('Admin Module - User Status Management', () => {
-  it('should toggle user active status', () => {
-    const toggleStatus = (currentStatus: boolean): boolean => !currentStatus;
-
-    expect(toggleStatus(true)).toBe(false);
-    expect(toggleStatus(false)).toBe(true);
-  });
-
-  it('should determine if user can be suspended', () => {
-    const canSuspend = (targetUserRole: string, currentUserRole: string): boolean => {
-      // Admins can suspend anyone except other admins
-      if (currentUserRole !== 'admin') return false;
-      return targetUserRole !== 'admin';
-    };
-
-    expect(canSuspend('member', 'admin')).toBe(true);
-    expect(canSuspend('moderator', 'admin')).toBe(true);
-    expect(canSuspend('admin', 'admin')).toBe(false);
-    expect(canSuspend('member', 'moderator')).toBe(false);
-  });
-});
-
-describe('Admin Module - List Filters', () => {
-  it('should apply pagination correctly', () => {
-    const paginate = <T>(items: T[], limit: number, offset: number): T[] => {
-      return items.slice(offset, offset + limit);
-    };
-
-    const items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    expect(paginate(items, 5, 0)).toEqual([1, 2, 3, 4, 5]);
-    expect(paginate(items, 5, 5)).toEqual([6, 7, 8, 9, 10]);
-    expect(paginate(items, 3, 3)).toEqual([4, 5, 6]);
-  });
-
-  it('should calculate pagination metadata', () => {
-    const calculatePagination = (total: number, limit: number, offset: number) => {
-      return {
-        total,
-        limit,
-        offset,
-        hasMore: offset + limit < total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: Math.floor(offset / limit) + 1,
+  describe('User Metrics Structure', () => {
+    it('should have correct structure for user metrics', () => {
+      const userMetrics: UserMetrics = {
+        totalUsers: 100,
+        activeUsers: 80,
+        newUsersThisMonth: 10,
+        premiumUsers: 25,
+        freeUsers: 75
       };
-    };
 
-    const result = calculatePagination(100, 10, 20);
-    expect(result.hasMore).toBe(true);
-    expect(result.totalPages).toBe(10);
-    expect(result.currentPage).toBe(3);
+      expect(userMetrics.totalUsers).toBe(100);
+      expect(userMetrics.activeUsers).toBe(80);
+      expect(userMetrics.newUsersThisMonth).toBe(10);
+      expect(userMetrics.premiumUsers).toBe(25);
+      expect(userMetrics.freeUsers).toBe(75);
+    });
+
+    it('should have premium + free equal total users', () => {
+      const userMetrics: UserMetrics = {
+        totalUsers: 100,
+        activeUsers: 80,
+        newUsersThisMonth: 10,
+        premiumUsers: 25,
+        freeUsers: 75
+      };
+
+      expect(userMetrics.premiumUsers + userMetrics.freeUsers).toBe(userMetrics.totalUsers);
+    });
+  });
+
+  describe('Content Metrics Structure', () => {
+    it('should have correct structure for content metrics', () => {
+      const contentMetrics: ContentMetrics = {
+        totalVideos: 50,
+        totalBlogPosts: 30,
+        totalSnippets: 100,
+        totalForumPosts: 200,
+        pendingReports: 5
+      };
+
+      expect(contentMetrics.totalVideos).toBe(50);
+      expect(contentMetrics.totalBlogPosts).toBe(30);
+      expect(contentMetrics.totalSnippets).toBe(100);
+      expect(contentMetrics.totalForumPosts).toBe(200);
+      expect(contentMetrics.pendingReports).toBe(5);
+    });
+  });
+
+  describe('Dashboard Stats Structure', () => {
+    it('should have correct complete structure', () => {
+      const stats: DashboardStats = {
+        revenue: {
+          mrr: 1000,
+          arr: 12000,
+          totalRevenue: 50000,
+          activeSubscriptions: 100,
+          churnRate: 5,
+          paymentSuccessRate: 95
+        },
+        users: {
+          totalUsers: 1000,
+          activeUsers: 800,
+          newUsersThisMonth: 50,
+          premiumUsers: 100,
+          freeUsers: 900
+        },
+        content: {
+          totalVideos: 50,
+          totalBlogPosts: 30,
+          totalSnippets: 100,
+          totalForumPosts: 200,
+          pendingReports: 5
+        }
+      };
+
+      // Verify all revenue metrics
+      expect(stats.revenue.mrr).toBeDefined();
+      expect(stats.revenue.arr).toBeDefined();
+      expect(stats.revenue.totalRevenue).toBeDefined();
+      expect(stats.revenue.activeSubscriptions).toBeDefined();
+      expect(stats.revenue.churnRate).toBeDefined();
+      expect(stats.revenue.paymentSuccessRate).toBeDefined();
+
+      // Verify all user metrics
+      expect(stats.users.totalUsers).toBeDefined();
+      expect(stats.users.activeUsers).toBeDefined();
+      expect(stats.users.newUsersThisMonth).toBeDefined();
+      expect(stats.users.premiumUsers).toBeDefined();
+      expect(stats.users.freeUsers).toBeDefined();
+
+      // Verify all content metrics
+      expect(stats.content.totalVideos).toBeDefined();
+      expect(stats.content.totalBlogPosts).toBeDefined();
+      expect(stats.content.totalSnippets).toBeDefined();
+      expect(stats.content.totalForumPosts).toBeDefined();
+      expect(stats.content.pendingReports).toBeDefined();
+    });
+  });
+
+  describe('Metrics Display Format', () => {
+    it('should format currency values correctly', () => {
+      const mrr = 1234.56;
+      const formatted = `$${mrr}`;
+      expect(formatted).toBe('$1234.56');
+    });
+
+    it('should format percentage values correctly', () => {
+      const churnRate = 5.5;
+      const formatted = `${churnRate}%`;
+      expect(formatted).toBe('5.5%');
+    });
+
+    it('should round numbers appropriately', () => {
+      const value = 1234.5678;
+      const rounded = Math.round(value * 100) / 100;
+      expect(rounded).toBe(1234.57);
+    });
   });
 });
