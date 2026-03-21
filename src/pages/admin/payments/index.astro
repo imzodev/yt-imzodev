@@ -1,173 +1,227 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import Navbar from '../../../components/Navbar.astro';
-import { getSession, isAdmin } from '../../../lib/server/auth';
-import { getCsrfToken } from '../../../lib/server/csrf';
+/**
+ * Admin Failed Payments Page
+ * Manage failed payment attempts and dunning.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import MetricCard from '../../../components/admin/MetricCard.astro';
 import { listFailedPayments } from '../../../lib/server/admin';
 
 export const prerender = false;
 
-// Check if user is authenticated
-const authResult = await getSession(Astro);
-const user = authResult?.user;
-
-if (!user) {
-  return Astro.redirect('/login?redirect=/admin/payments');
-}
-
-// Check admin role
-const userIsAdmin = await isAdmin(user.id);
-if (!userIsAdmin) {
-  return Astro.redirect('/dashboard?error=unauthorized');
-}
-
+// Admin auth is handled by AdminLayout
 // Get failed payments
 const failedPayments = await listFailedPayments({ limit: 100 });
-const csrfToken = getCsrfToken(Astro.cookies);
+
+// Calculate stats
+const totalFailed = failedPayments.length;
+const totalAmount = failedPayments.reduce((sum, { payment }) => sum + (payment.amount / 100), 0);
+
+// Flatten payment data for table
+const tableData = failedPayments.map(({ payment, user }) => ({
+  ...payment,
+  user
+}));
 ---
 
-<Layout title="Failed Payments - Admin Dashboard">
-  <Navbar />
-  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <!-- Header -->
-      <div class="mb-8">
-        <a href="/admin" class="btn btn-ghost btn-sm mb-4">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Dashboard
-        </a>
-        <h1 class="text-3xl font-bold">Failed Payments</h1>
-        <p class="text-base-content/70 mt-2">Handle failed payment attempts and dunning</p>
-      </div>
+<AdminLayout 
+  title="Failed Payments" 
+  description="Manage failed payment attempts and dunning"
+  activeNav="payments"
+>
+  <!-- Stats Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <MetricCard 
+      label="Total Failed" 
+      value={totalFailed}
+      icon="alert"
+      variant="error"
+    />
+    <MetricCard 
+      label="Total Amount" 
+      value={`$${totalAmount.toFixed(2)}`}
+      icon="currency"
+      variant="warning"
+    />
+    <MetricCard 
+      label="Pending Resolution" 
+      value={totalFailed}
+      icon="alert"
+    />
+  </div>
 
-      <!-- Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-base-100 shadow rounded-lg p-6">
-          <div class="text-sm text-base-content/70">Total Failed</div>
-          <div class="text-3xl font-bold text-error">{failedPayments.length}</div>
-        </div>
-        <div class="bg-base-100 shadow rounded-lg p-6">
-          <div class="text-sm text-base-content/70">Total Amount</div>
-          <div class="text-3xl font-bold text-warning">
-            ${failedPayments.reduce((sum, { payment }) => sum + (payment.amount / 100), 0).toFixed(2)}
-          </div>
-        </div>
-        <div class="bg-base-100 shadow rounded-lg p-6">
-          <div class="text-sm text-base-content/70">Pending Resolution</div>
-          <div class="text-3xl font-bold">{failedPayments.length}</div>
-        </div>
-      </div>
-
-      <!-- Failed Payments Table -->
-      <div class="bg-base-100 shadow rounded-lg overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Amount</th>
-                <th>Currency</th>
-                <th>Description</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {failedPayments.map(({ payment, user }) => (
+  {failedPayments.length === 0 ? (
+    <div class="bg-base-100 shadow rounded-lg p-12 text-center">
+      <svg class="w-20 h-20 mx-auto mb-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <h3 class="text-xl font-bold mb-2">No Failed Payments</h3>
+      <p class="text-base-content/70">All payments are processing successfully</p>
+    </div>
+  ) : (
+    <div class="bg-base-100 shadow rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th class="text-right">Amount</th>
+              <th>Currency</th>
+              <th>Description</th>
+              <th>Method</th>
+              <th>Date</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableData.map((row) => {
+              const user = row.user as { id?: number; name?: string; email?: string } | null;
+              const initial = user?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || '?';
+              const amount = (row.amount as number) / 100;
+              const paymentId = row.id;
+              
+              return (
                 <tr>
                   <td>
                     <div class="flex items-center gap-3">
                       <div class="avatar placeholder">
                         <div class="bg-neutral text-neutral-content rounded-full w-10">
-                          <span class="text-sm">{user?.name?.charAt(0) || user?.email?.charAt(0).toUpperCase() || '?'}</span>
+                          <span class="text-sm">{initial}</span>
                         </div>
                       </div>
                       <div>
                         <div class="font-bold">{user?.name || 'Unknown'}</div>
-                        <div class="text-sm opacity-50">{user?.email}</div>
+                        <div class="text-sm opacity-50">{user?.email || 'N/A'}</div>
+                        {user?.id && <a href={`/admin/users/${user.id}`} class="link link-primary text-xs">View Profile</a>}
                       </div>
                     </div>
                   </td>
-                  <td class="font-bold text-error">${(payment.amount / 100).toFixed(2)}</td>
-                  <td class="text-sm uppercase">{payment.currency}</td>
-                  <td class="text-sm">{payment.description || 'N/A'}</td>
-                  <td class="text-sm">{new Date(payment.createdAt).toLocaleDateString()}</td>
+                  <td class="text-right">
+                    <span class="font-bold text-error">${amount.toFixed(2)}</span>
+                  </td>
+                  <td>
+                    <span class="uppercase text-sm">{row.currency || 'USD'}</span>
+                  </td>
+                  <td>
+                    <span class="text-sm text-base-content/70">{row.description || 'N/A'}</span>
+                  </td>
+                  <td>
+                    <span class="badge badge-ghost badge-sm">{row.paymentMethod || 'Card'}</span>
+                  </td>
+                  <td>
+                    <span class="text-sm">{new Date(row.createdAt as string).toLocaleDateString()}</span>
+                  </td>
                   <td>
                     <div class="dropdown dropdown-end">
                       <label tabindex="0" class="btn btn-ghost btn-xs">
-                        Actions
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                        </svg>
                       </label>
-                      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+                      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-44">
                         <li>
-                          <button class="text-info">
-                            Retry Payment
+                          <button onclick={`handlePaymentAction(${paymentId}, 'retry')`} class="text-info">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Retry
                           </button>
                         </li>
                         <li>
-                          <button class="text-warning">
+                          <button onclick={`handlePaymentAction(${paymentId}, 'remind')`} class="text-warning">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
                             Send Reminder
                           </button>
                         </li>
                         <li>
-                          <button class="text-success">
+                          <button onclick={`handlePaymentAction(${paymentId}, 'resolve')`} class="text-success">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
                             Mark Resolved
                           </button>
-                        </li>
-                        <li>
-                          <a href={`/admin/users/${user?.id}`}>View User</a>
                         </li>
                       </ul>
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {failedPayments.length === 0 && (
-          <div class="p-8 text-center text-base-content/70">
-            <svg class="w-16 h-16 mx-auto mb-4 opacity-50 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            <p>No failed payments</p>
-            <p class="text-sm mt-2">All payments are processing successfully</p>
-          </div>
-        )}
-      </div>
-
-      <!-- Notes -->
-      <div class="mt-6 bg-base-100 shadow rounded-lg p-6">
-        <h3 class="font-semibold mb-4">💡 Dunning Best Practices</h3>
-        <ul class="text-sm space-y-2 text-base-content/80">
-          <li class="flex items-start gap-2">
-            <svg class="w-4 h-4 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Retry payments after 3 days, then 7 days, then 14 days</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <svg class="w-4 h-4 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Send email reminders with link to update payment method</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <svg class="w-4 h-4 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Consider grace period of 7-14 days before downgrading</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <svg class="w-4 h-4 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Track recovery rate to optimize dunning flow</span>
-          </li>
-        </ul>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
-  </main>
-</Layout>
+  )}
+
+  <!-- Dunning Best Practices -->
+  <div class="mt-8 bg-base-100 shadow rounded-lg p-6">
+    <h3 class="font-semibold mb-4 text-lg">💡 Dunning Best Practices</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="flex items-start gap-3">
+        <div class="p-2 rounded-lg bg-info/10 text-info">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-medium text-sm">Act Quickly</h4>
+          <p class="text-xs text-base-content/70">Contact customers within 24-48 hours of failed payment</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="p-2 rounded-lg bg-warning/10 text-warning">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-medium text-sm">Send Reminders</h4>
+          <p class="text-xs text-base-content/70">Automated email reminders with direct payment links</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="p-2 rounded-lg bg-success/10 text-success">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-medium text-sm">Offer Options</h4>
+          <p class="text-xs text-base-content/70">Provide alternative payment methods or grace periods</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="p-2 rounded-lg bg-error/10 text-error">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-medium text-sm">Set Limits</h4>
+          <p class="text-xs text-base-content/70">Define max retry attempts before account suspension</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script define:vars={{ paymentIds: failedPayments.map(fp => fp.payment.id) }}>
+  function handlePaymentAction(paymentId, action) {
+    // Placeholder actions - these would call API endpoints in production
+    const messages = {
+      retry: `Retry payment request sent for payment #${paymentId}. This feature is coming soon!`,
+      remind: `Payment reminder sent to customer for payment #${paymentId}. This feature is coming soon!`,
+      resolve: `Payment #${paymentId} marked as resolved. This feature is coming soon!`
+    };
+    
+    alert(messages[action] || 'Unknown action');
+    
+    // Log for debugging
+    console.log(`Payment Action: ${action}`, { paymentId });
+  }
+  
+  // Make function globally available
+  window.handlePaymentAction = handlePaymentAction;
+</script>
