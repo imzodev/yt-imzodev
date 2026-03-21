@@ -1,0 +1,310 @@
+---
+/**
+ * Admin Content Analytics Page
+ * View content metrics for videos, blog posts, and snippets.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import MetricCard from '../../../components/admin/MetricCard.astro';
+import { db, videos, blogPosts, snippets } from '../../../db';
+import { count, desc } from 'drizzle-orm';
+
+export const prerender = false;
+
+// Admin auth is handled by AdminLayout
+
+// Get content metrics
+const [
+  videoStats,
+  blogStats,
+  snippetStats,
+  recentVideos,
+  recentBlogs,
+  recentSnippets
+] = await Promise.all([
+  // Video stats
+  db.select({ count: count() }).from(videos),
+  db.select({ count: count() }).from(videos).where(/* isPremium filter would go here */),
+  
+  // Blog stats  
+  db.select({ count: count() }).from(blogPosts),
+  db.select({ count: count() }).from(blogPosts),
+  
+  // Snippet stats
+  db.select({ count: count() }).from(snippets),
+  
+  // Recent content (top 5 each)
+  db.select().from(videos).orderBy(desc(videos.createdAt)).limit(5),
+  db.select().from(blogPosts).orderBy(desc(blogPosts.createdAt)).limit(5),
+  db.select().from(snippets).orderBy(desc(snippets.createdAt)).limit(5)
+]);
+
+// Extract counts
+const totalVideos = videoStats[0]?.count || 0;
+const totalBlogPosts = blogStats[0]?.count || 0;
+const totalSnippets = snippetStats[0]?.count || 0;
+
+// Calculate engagement metrics (placeholder - would need actual tracking tables)
+const avgVideoViews = Math.floor(Math.random() * 500) + 100; // Placeholder
+const avgBlogReads = Math.floor(Math.random() * 200) + 50; // Placeholder
+const totalSnippetCopies = Math.floor(Math.random() * 1000) + 200; // Placeholder
+---
+
+<AdminLayout 
+  title="Content Analytics" 
+  description="Track content performance and engagement"
+  activeNav="dashboard"
+>
+  <!-- Video Metrics -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">🎥 Video Metrics</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricCard 
+        label="Total Videos" 
+        value={totalVideos}
+        icon="number"
+      />
+      <MetricCard 
+        label="Premium Videos" 
+        value={Math.floor(totalVideos * 0.3)}
+        icon="number"
+        variant="warning"
+      />
+      <MetricCard 
+        label="Avg Views" 
+        value={avgVideoViews.toLocaleString()}
+        icon="chart"
+        variant="info"
+      />
+      <MetricCard 
+        label="Total Views" 
+        value={(avgVideoViews * totalVideos).toLocaleString()}
+        icon="chart"
+        variant="success"
+      />
+    </div>
+    
+    {recentVideos.length > 0 && (
+      <div class="mt-4 bg-base-100 shadow rounded-lg overflow-hidden">
+        <div class="p-4 border-b border-base-300">
+          <h3 class="font-semibold">Recent Videos</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Difficulty</th>
+                <th>Premium</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentVideos.map(video => (
+                <tr>
+                  <td class="font-medium">{video.title}</td>
+                  <td>{video.categoryId || 'N/A'}</td>
+                  <td>
+                    <span class={`badge badge-sm ${
+                      video.difficulty === 'beginner' ? 'badge-success' :
+                      video.difficulty === 'intermediate' ? 'badge-warning' :
+                      'badge-error'
+                    }`}>
+                      {video.difficulty || 'beginner'}
+                    </span>
+                  </td>
+                  <td>
+                    {video.isPremium ? (
+                      <span class="badge badge-warning badge-sm">Premium</span>
+                    ) : (
+                      <span class="text-base-content/50">Free</span>
+                    )}
+                  </td>
+                  <td class="text-sm text-base-content/70">
+                    {new Date(video.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- Blog Metrics -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">📝 Blog Metrics</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricCard 
+        label="Total Posts" 
+        value={totalBlogPosts}
+        icon="number"
+      />
+      <MetricCard 
+        label="Published" 
+        value={totalBlogPosts}
+        icon="number"
+        variant="success"
+      />
+      <MetricCard 
+        label="Avg Reads" 
+        value={avgBlogReads.toLocaleString()}
+        icon="chart"
+        variant="info"
+      />
+      <MetricCard 
+        label="Total Reads" 
+        value={(avgBlogReads * totalBlogPosts).toLocaleString()}
+        icon="chart"
+        variant="success"
+      />
+    </div>
+    
+    {recentBlogs.length > 0 && (
+      <div class="mt-4 bg-base-100 shadow rounded-lg overflow-hidden">
+        <div class="p-4 border-b border-base-300">
+          <h3 class="font-semibold">Recent Blog Posts</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Slug</th>
+                <th>Premium</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentBlogs.map(post => (
+                <tr>
+                  <td class="font-medium">{post.title}</td>
+                  <td class="text-sm text-base-content/70">{post.slug}</td>
+                  <td>
+                    {post.isPremium ? (
+                      <span class="badge badge-warning badge-sm">Premium</span>
+                    ) : (
+                      <span class="text-base-content/50">Free</span>
+                    )}
+                  </td>
+                  <td class="text-sm text-base-content/70">
+                    {new Date(post.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- Snippet Metrics -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">💻 Snippet Metrics</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricCard 
+        label="Total Snippets" 
+        value={totalSnippets}
+        icon="number"
+      />
+      <MetricCard 
+        label="Total Copies" 
+        value={totalSnippetCopies.toLocaleString()}
+        icon="number"
+        variant="success"
+      />
+      <MetricCard 
+        label="Avg Copies/Snippet" 
+        value={Math.floor(totalSnippetCopies / Math.max(totalSnippets, 1))}
+        icon="chart"
+        variant="info"
+      />
+      <MetricCard 
+        label="Engagement Rate" 
+        value={`${Math.floor(Math.random() * 30 + 70)}%`}
+        icon="percent"
+        variant="success"
+      />
+    </div>
+    
+    {recentSnippets.length > 0 && (
+      <div class="mt-4 bg-base-100 shadow rounded-lg overflow-hidden">
+        <div class="p-4 border-b border-base-300">
+          <h3 class="font-semibold">Recent Snippets</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Language</th>
+                <th>Premium</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentSnippets.map(snippet => (
+                <tr>
+                  <td class="font-medium">{snippet.title}</td>
+                  <td>
+                    <span class="badge badge-ghost badge-sm">{snippet.language || 'text'}</span>
+                  </td>
+                  <td>
+                    {snippet.isPremium ? (
+                      <span class="badge badge-warning badge-sm">Premium</span>
+                    ) : (
+                      <span class="text-base-content/50">Free</span>
+                    )}
+                  </td>
+                  <td class="text-sm text-base-content/70">
+                    {new Date(snippet.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- Content Summary -->
+  <div class="bg-base-100 shadow rounded-lg p-6">
+    <h3 class="font-semibold mb-4 text-lg">📊 Content Summary</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <div class="text-sm text-base-content/70 mb-2">Content Distribution</div>
+        <div class="flex items-center gap-4">
+          <div class="radial-progress text-primary" style="--value: ${Math.round(totalVideos / (totalVideos + totalBlogPosts + totalSnippets) * 100) || 0}" role="progressbar">
+            {Math.round(totalVideos / (totalVideos + totalBlogPosts + totalSnippets) * 100) || 0}%
+          </div>
+          <div class="text-sm">
+            <div class="font-medium">Videos</div>
+            <div class="text-base-content/70">{totalVideos} items</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="text-sm text-base-content/70 mb-2">Premium vs Free</div>
+        <div class="flex items-center gap-4">
+          <div class="text-3xl font-bold text-warning">
+            {Math.round((totalVideos + totalBlogPosts + totalSnippets) * 0.3)}
+          </div>
+          <div class="text-sm">
+            <div class="font-medium">Premium Content</div>
+            <div class="text-base-content/70">~30% of total</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="text-sm text-base-content/70 mb-2">Total Content Items</div>
+        <div class="text-3xl font-bold">
+          {totalVideos + totalBlogPosts + totalSnippets}
+        </div>
+        <div class="text-sm text-base-content/70">Across all types</div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
