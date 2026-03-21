@@ -101,3 +101,34 @@ export async function requireAdmin(Astro: AstroGlobal): Promise<{ userId: string
 
   return { userId: user.id };
 }
+
+/**
+ * API route helper to check admin access.
+ * Use this in API routes where you have the user ID from session.
+ * @param supabaseUserId - The Supabase Auth user ID
+ * @returns Object with authorized status and optional error response
+ */
+export async function checkAdminAccess(supabaseUserId: string): Promise<{ authorized: true } | { authorized: false; error: Response }> {
+  if (!supabaseUserId) {
+    return {
+      authorized: false,
+      error: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    };
+  }
+
+  const userIsAdmin = await isAdmin(supabaseUserId);
+  if (!userIsAdmin) {
+    return {
+      authorized: false,
+      error: new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    };
+  }
+
+  return { authorized: true };
+}

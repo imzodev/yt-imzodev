@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getSession, requireAdmin } from '../../../lib/server/auth';
+import { getSession, checkAdminAccess } from '../../../lib/server/auth';
 import { listUsers, updateUserRole, setUserActiveStatus } from '../../../lib/server/admin';
 import { validateCsrfToken } from '../../../lib/server/csrf';
 
@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     });
   }
 
-  const adminCheck = await requireAdmin(authResult.user.id);
+  const adminCheck = await checkAdminAccess(authResult.user.id);
   if (!adminCheck.authorized) {
     return adminCheck.error;
   }
@@ -52,7 +52,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
     });
   }
 
-  const adminCheck = await requireAdmin(authResult.user.id);
+  const adminCheck = await checkAdminAccess(authResult.user.id);
   if (!adminCheck.authorized) {
     return adminCheck.error;
   }

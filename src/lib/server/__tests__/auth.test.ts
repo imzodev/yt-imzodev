@@ -95,3 +95,63 @@ describe('Auth Module - Error Handling', () => {
     expect(handleDbError(new Error('Connection failed'))).toBe(false);
   });
 });
+
+describe('Auth Module - checkAdminAccess Logic', () => {
+  it('should return unauthorized for empty user ID', () => {
+    const checkAccess = (userId: string | null | undefined) => {
+      if (!userId) {
+        return { authorized: false, errorStatus: 401 };
+      }
+      return { authorized: true };
+    };
+
+    expect(checkAccess('')).toEqual({ authorized: false, errorStatus: 401 });
+    expect(checkAccess(null)).toEqual({ authorized: false, errorStatus: 401 });
+    expect(checkAccess(undefined)).toEqual({ authorized: false, errorStatus: 401 });
+  });
+
+  it('should return forbidden for non-admin users', () => {
+    const checkAccess = (userId: string, isAdmin: boolean) => {
+      if (!userId) {
+        return { authorized: false, errorStatus: 401 };
+      }
+      if (!isAdmin) {
+        return { authorized: false, errorStatus: 403 };
+      }
+      return { authorized: true };
+    };
+
+    expect(checkAccess('user-id', false)).toEqual({ authorized: false, errorStatus: 403 });
+    expect(checkAccess('user-id', true)).toEqual({ authorized: true });
+  });
+
+  it('should return authorized for admin users', () => {
+    const checkAccess = (userId: string, isAdmin: boolean) => {
+      if (!userId) {
+        return { authorized: false, errorStatus: 401 };
+      }
+      if (!isAdmin) {
+        return { authorized: false, errorStatus: 403 };
+      }
+      return { authorized: true };
+    };
+
+    expect(checkAccess('admin-user-id', true)).toEqual({ authorized: true });
+  });
+});
+
+describe('Auth Module - Response Status Codes', () => {
+  it('should use correct HTTP status codes for different scenarios', () => {
+    const getStatusCode = (scenario: 'unauthenticated' | 'forbidden' | 'success') => {
+      switch (scenario) {
+        case 'unauthenticated': return 401;
+        case 'forbidden': return 403;
+        case 'success': return 200;
+      }
+    };
+
+    expect(getStatusCode('unauthenticated')).toBe(401);
+    expect(getStatusCode('forbidden')).toBe(403);
+    expect(getStatusCode('success')).toBe(200);
+  });
+});

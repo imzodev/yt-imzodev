@@ -1,0 +1,290 @@
+---
+/**
+ * Admin User Detail Page
+ * Shows detailed user information with management actions.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import Navbar from '../../../components/Navbar.astro';
+import { getSession, isAdmin } from '../../../lib/server/auth';
+import { getCsrfToken } from '../../../lib/server/csrf';
+import { getUserWithSubscription, updateUserRole, setUserActiveStatus } from '../../../lib/server/admin';
+
+export const prerender = false;
+
+// Get user ID from URL
+const userIdParam = Astro.url.pathname.split('/').pop();
+const userId = userIdParam ? parseInt(userIdParam, 10) : NaN;
+
+if (isNaN(userId)) {
+  return Astro.redirect('/admin/users?error=invalid-id');
+}
+
+// Check if user is authenticated
+const authResult = await getSession(Astro);
+const currentUser = authResult?.user;
+
+if (!currentUser) {
+  return Astro.redirect('/login?redirect=/admin/users/' + userId);
+}
+
+// Check admin role
+const userIsAdmin = await isAdmin(currentUser.id);
+if (!userIsAdmin) {
+  return Astro.redirect('/dashboard?error=unauthorized');
+}
+
+// Get user data
+const userData = await getUserWithSubscription(userId);
+
+if (!userData) {
+  return Astro.redirect('/admin/users?error=user-not-found');
+}
+
+const { user, subscription } = userData;
+const csrfToken = getCsrfToken(Astro.cookies);
+---
+
+<Layout title={`User: ${user.name || user.email} - Admin Dashboard`}>
+  <Navbar />
+  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <a href="/admin/users" class="btn btn-ghost btn-sm mb-4">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Users
+        </a>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="avatar placeholder">
+              <div class="bg-neutral text-neutral-content rounded-full w-16">
+                <span class="text-2xl">{user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}</span>
+              </div>
+            </div>
+            <div>
+              <h1 class="text-3xl font-bold">{user.name || 'No name'}</h1>
+              <p class="text-base-content/70">@{user.username || 'no-username'}</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <span class={`badge badge-lg ${user.isActive ? 'badge-success' : 'badge-error'}`}>
+              {user.isActive ? 'Active' : 'Inactive'}
+            </span>
+            <span class={`badge badge-lg ${
+              user.role === 'admin' ? 'badge-error' :
+              user.role === 'moderator' ? 'badge-warning' :
+              'badge-ghost'
+            }`}>
+              {user.role}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Info Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Profile Info -->
+        <div class="bg-base-100 shadow rounded-lg">
+          <div class="p-6 border-b border-base-300">
+            <h2 class="text-xl font-semibold">Profile Information</h2>
+          </div>
+          <div class="p-6">
+            <dl class="space-y-4">
+              <div>
+                <dt class="text-sm text-base-content/70">Email</dt>
+                <dd class="font-medium">{user.email}</dd>
+              </div>
+              <div>
+                <dt class="text-sm text-base-content/70">Username</dt>
+                <dd class="font-medium">{user.username || 'Not set'}</dd>
+              </div>
+              <div>
+                <dt class="text-sm text-base-content/70">Display Name</dt>
+                <dd class="font-medium">{user.name || 'Not set'}</dd>
+              </div>
+              <div>
+                <dt class="text-sm text-base-content/70">Joined</dt>
+                <dd class="font-medium">{new Date(user.createdAt).toLocaleDateString()}</dd>
+              </div>
+              <div>
+                <dt class="text-sm text-base-content/70">Last Updated</dt>
+                <dd class="font-medium">{new Date(user.updatedAt).toLocaleDateString()}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <!-- Subscription Info -->
+        <div class="bg-base-100 shadow rounded-lg">
+          <div class="p-6 border-b border-base-300">
+            <h2 class="text-xl font-semibold">Subscription</h2>
+          </div>
+          <div class="p-6">
+            <dl class="space-y-4">
+              <div>
+                <dt class="text-sm text-base-content/70">Tier</dt>
+                <dd>
+                  <span class={`badge ${user.subscriptionTier === 'premium' ? 'badge-success' : 'badge-ghost'}`}>
+                    {user.subscriptionTier}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm text-base-content/70">Subscription Status</dt>
+                <dd>
+                  {subscription ? (
+                    <span class={`badge ${
+                      subscription.status === 'active' ? 'badge-success' :
+                      subscription.status === 'trialing' ? 'badge-info' :
+                      subscription.status === 'past_due' ? 'badge-warning' :
+                      subscription.status === 'canceled' ? 'badge-error' :
+                      'badge-ghost'
+                    }`}>
+                      {subscription.status}
+                    </span>
+                  ) : (
+                    <span class="badge badge-ghost">No subscription</span>
+                  )}
+                </dd>
+              </div>
+              {subscription && (
+                <>
+                  <div>
+                    <dt class="text-sm text-base-content/70">Current Period End</dt>
+                    <dd class="font-medium">
+                      {subscription.currentPeriodEnd 
+                        ? new Date(subscription.currentPeriodEnd).toLocaleDateString() 
+                        : 'N/A'}
+                    </dd>
+                  </div>
+                  {subscription.cancelAtPeriodEnd && (
+                    <div>
+                      <dt class="text-sm text-warning">Canceling at Period End</dt>
+                      <dd class="font-medium text-warning">Yes</dd>
+                    </div>
+                  )}
+                  {subscription.trialEnd && (
+                    <div>
+                      <dt class="text-sm text-base-content/70">Trial Ends</dt>
+                      <dd class="font-medium">{new Date(subscription.trialEnd).toLocaleDateString()}</dd>
+                    </div>
+                  )}
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <!-- Management Actions -->
+      <div class="bg-base-100 shadow rounded-lg mb-8">
+        <div class="p-6 border-b border-base-300">
+          <h2 class="text-xl font-semibold">Management Actions</h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Role Management -->
+            <div>
+              <h3 class="font-medium mb-3">Role</h3>
+              <div class="flex flex-wrap gap-2">
+                <button 
+                  class={`btn btn-sm ${user.role === 'member' ? 'btn-primary' : 'btn-outline'}`}
+                  hx-patch="/api/admin/users"
+                  hx-headers='{"Content-Type": "application/json"}'
+                  hx-vals={`{"userId": ${user.id}, "action": "updateRole", "value": "member", "csrfToken": "${csrfToken}"}`}
+                  hx-confirm="Change role to member?"
+                  hx-target="body"
+                  hx-swap="none"
+                  {user.role === 'member' && 'disabled'}
+                >
+                  Member
+                </button>
+                <button 
+                  class={`btn btn-sm ${user.role === 'moderator' ? 'btn-primary' : 'btn-outline'}`}
+                  hx-patch="/api/admin/users"
+                  hx-headers='{"Content-Type": "application/json"}'
+                  hx-vals={`{"userId": ${user.id}, "action": "updateRole", "value": "moderator", "csrfToken": "${csrfToken}"}`}
+                  hx-confirm="Change role to moderator?"
+                  {user.role === 'moderator' && 'disabled'}
+                >
+                  Moderator
+                </button>
+                <button 
+                  class={`btn btn-sm ${user.role === 'admin' ? 'btn-primary' : 'btn-outline'}`}
+                  hx-patch="/api/admin/users"
+                  hx-headers='{"Content-Type": "application/json"}'
+                  hx-vals={`{"userId": ${user.id}, "action": "updateRole", "value": "admin", "csrfToken": "${csrfToken}"}`}
+                  hx-confirm="Make this user an admin?"
+                  {user.role === 'admin' && 'disabled'}
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
+
+            <!-- Account Status -->
+            <div>
+              <h3 class="font-medium mb-3">Account Status</h3>
+              <div class="flex gap-2">
+                {user.isActive ? (
+                  <button 
+                    class="btn btn-error btn-sm"
+                    hx-patch="/api/admin/users"
+                    hx-headers='{"Content-Type": "application/json"}'
+                    hx-vals={`{"userId": ${user.id}, "action": "setActive", "value": false, "csrfToken": "${csrfToken}"}`}
+                    hx-confirm="Suspend this user account?"
+                  >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    Suspend Account
+                  </button>
+                ) : (
+                  <button 
+                    class="btn btn-success btn-sm"
+                    hx-patch="/api/admin/users"
+                    hx-headers='{"Content-Type": "application/json"}'
+                    hx-vals={`{"userId": ${user.id}, "action": "setActive", "value": true, "csrfToken": "${csrfToken}"}`}
+                    hx-confirm="Restore this user account?"
+                  >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Restore Account
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="bg-base-100 shadow rounded-lg border border-error/20">
+        <div class="p-6 border-b border-base-300 bg-error/5">
+          <h2 class="text-xl font-semibold text-error">Danger Zone</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-base-content/70 mb-4">
+            These actions are irreversible. Proceed with caution.
+          </p>
+          <button class="btn btn-error btn-outline btn-sm" disabled title="Not implemented">
+            Delete User Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  // Handle HTMX responses
+  document.body.addEventListener('htmx:afterRequest', (e: CustomEvent) => {
+    if (e.detail?.xhr?.status === 200) {
+      // Reload page on success
+      window.location.reload();
+    }
+  });
+</script>
