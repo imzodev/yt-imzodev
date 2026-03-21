@@ -1,154 +1,151 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import Navbar from '../../../components/Navbar.astro';
-import { getSession, isAdmin } from '../../../lib/server/auth';
-import { getCsrfToken } from '../../../lib/server/csrf';
+/**
+ * Admin Subscriptions Page
+ * View and manage user subscriptions with status filtering.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import DataTable from '../../../components/admin/DataTable.astro';
 import { listSubscriptions } from '../../../lib/server/admin';
 
 export const prerender = false;
 
-// Check if user is authenticated
-const authResult = await getSession(Astro);
-const user = authResult?.user;
-
-if (!user) {
-  return Astro.redirect('/login?redirect=/admin/subscriptions');
-}
-
-// Check admin role
-const userIsAdmin = await isAdmin(user.id);
-if (!userIsAdmin) {
-  return Astro.redirect('/dashboard?error=unauthorized');
-}
-
+// Admin auth is handled by AdminLayout
 // Get subscriptions
 const subscriptions = await listSubscriptions({ limit: 100 });
-const csrfToken = getCsrfToken(Astro.cookies);
+
+// Define table columns
+const columns = [
+  { 
+    key: 'user', 
+    label: 'User',
+    render: (_: unknown, row: Record<string, unknown>) => {
+      const user = row.user as { name?: string; email?: string } | null;
+      const initial = user?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || '?';
+      return `
+        <div class="flex items-center gap-3">
+          <div class="avatar placeholder">
+            <div class="bg-neutral text-neutral-content rounded-full w-10">
+              <span class="text-sm">${initial}</span>
+            </div>
+          </div>
+          <div>
+            <div class="font-bold">${user?.name || 'Unknown'}</div>
+            <div class="text-sm opacity-50">${user?.email || 'N/A'}</div>
+          </div>
+        </div>
+      `;
+    }
+  },
+  { 
+    key: 'status', 
+    label: 'Status', 
+    sortable: true,
+    render: (value: unknown) => {
+      const status = String(value);
+      const badgeClass = {
+        'active': 'badge-success',
+        'trialing': 'badge-info',
+        'past_due': 'badge-warning',
+        'canceled': 'badge-error',
+      }[status] || 'badge-ghost';
+      return `<span class="badge badge-sm ${badgeClass}">${status}</span>`;
+    }
+  },
+  { 
+    key: 'priceId', 
+    label: 'Price ID',
+    render: (value: unknown) => `<code class="text-xs">${value || 'N/A'}</code>`
+  },
+  { 
+    key: 'currentPeriodEnd', 
+    label: 'Period End', 
+    sortable: true,
+    render: (value: unknown) => {
+      if (!value) return '<span class="text-base-content/50">N/A</span>';
+      return new Date(value as string).toLocaleDateString();
+    }
+  },
+  { 
+    key: 'trialEnd', 
+    label: 'Trial End',
+    render: (value: unknown) => {
+      if (!value) return '<span class="text-base-content/50">—</span>';
+      return new Date(value as string).toLocaleDateString();
+    }
+  },
+  { 
+    key: 'cancelAtPeriodEnd', 
+    label: 'Canceling',
+    render: (value: unknown) => {
+      if (value) {
+        return '<span class="badge badge-warning badge-sm">Yes</span>';
+      }
+      return '<span class="text-base-content/50">No</span>';
+    }
+  },
+  { 
+    key: 'createdAt', 
+    label: 'Created', 
+    sortable: true,
+    render: (value: unknown) => new Date(value as string).toLocaleDateString()
+  }
+];
+
+// Flatten subscription data for table
+const tableData = subscriptions.map(({ subscription, user }) => ({
+  ...subscription,
+  user
+}));
 ---
 
-<Layout title="Subscriptions - Admin Dashboard">
-  <Navbar />
-  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <!-- Header -->
-      <div class="mb-8">
-        <a href="/admin" class="btn btn-ghost btn-sm mb-4">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Dashboard
-        </a>
-        <h1 class="text-3xl font-bold">Subscriptions</h1>
-        <p class="text-base-content/70 mt-2">Manage user subscriptions</p>
-      </div>
+<AdminLayout 
+  title="Subscriptions" 
+  description="View and manage user subscriptions"
+  activeNav="subscriptions"
+>
+  <!-- Status Filter Pills -->
+  <div class="mb-6 flex flex-wrap gap-2">
+    <a href="/admin/subscriptions" class="btn btn-sm btn-ghost">All</a>
+    <a href="/admin/subscriptions?status=active" class="btn btn-sm btn-ghost text-success">Active</a>
+    <a href="/admin/subscriptions?status=trialing" class="btn btn-sm btn-ghost text-info">Trialing</a>
+    <a href="/admin/subscriptions?status=past_due" class="btn btn-sm btn-ghost text-warning">Past Due</a>
+    <a href="/admin/subscriptions?status=canceled" class="btn btn-sm btn-ghost text-error">Canceled</a>
+  </div>
 
-      <!-- Filters -->
-      <div class="bg-base-100 shadow rounded-lg p-4 mb-6">
-        <div class="flex flex-wrap gap-4">
-          <select class="select select-bordered" id="status-filter">
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="trialing">Trialing</option>
-            <option value="past_due">Past Due</option>
-            <option value="canceled">Canceled</option>
-          </select>
-        </div>
-      </div>
+  <!-- Subscriptions Table -->
+  <DataTable 
+    columns={columns}
+    data={tableData}
+    searchable={true}
+    searchPlaceholder="Search by user email or name..."
+    emptyMessage="No subscriptions found"
+  />
 
-      <!-- Subscriptions Table -->
-      <div class="bg-base-100 shadow rounded-lg overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Plan</th>
-                <th>Status</th>
-                <th>Current Period End</th>
-                <th>Trial End</th>
-                <th>Cancel at Period End</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subscriptions.map(({ subscription, user }) => (
-                <tr>
-                  <td>
-                    <div class="flex items-center gap-3">
-                      <div class="avatar placeholder">
-                        <div class="bg-neutral text-neutral-content rounded-full w-10">
-                          <span class="text-sm">{user?.name?.charAt(0) || user?.email?.charAt(0).toUpperCase() || '?'}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div class="font-bold">{user?.name || 'Unknown'}</div>
-                        <div class="text-sm opacity-50">{user?.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="text-sm">{subscription.priceId || 'N/A'}</td>
-                  <td>
-                    <span class={`badge badge-sm ${
-                      subscription.status === 'active' ? 'badge-success' :
-                      subscription.status === 'trialing' ? 'badge-info' :
-                      subscription.status === 'past_due' ? 'badge-warning' :
-                      subscription.status === 'canceled' ? 'badge-error' :
-                      'badge-ghost'
-                    }`}>
-                      {subscription.status}
-                    </span>
-                  </td>
-                  <td class="text-sm">
-                    {subscription.currentPeriodEnd 
-                      ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
-                      : 'N/A'}
-                  </td>
-                  <td class="text-sm">
-                    {subscription.trialEnd 
-                      ? new Date(subscription.trialEnd).toLocaleDateString()
-                      : 'N/A'}
-                  </td>
-                  <td>
-                    {subscription.cancelAtPeriodEnd ? (
-                      <span class="text-warning">Yes</span>
-                    ) : (
-                      <span class="text-base-content/50">No</span>
-                    )}
-                  </td>
-                  <td class="text-sm">{new Date(subscription.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {subscriptions.length === 0 && (
-          <div class="p-8 text-center text-base-content/70">
-            <p>No subscriptions found</p>
-          </div>
-        )}
+  <!-- Stats Summary -->
+  <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Active</div>
+      <div class="stat-value text-success text-2xl">
+        {subscriptions.filter(s => s.subscription.status === 'active').length}
       </div>
     </div>
-  </main>
-</Layout>
-
-<script>
-  // Client-side filtering
-  document.addEventListener('DOMContentLoaded', () => {
-    const statusFilter = document.getElementById('status-filter');
-    const tableBody = document.querySelector('tbody');
-    
-    function filterSubscriptions() {
-      const status = statusFilter?.value || '';
-      const rows = tableBody?.querySelectorAll('tr') || [];
-      
-      rows.forEach((row: HTMLTableRowElement) => {
-        const statusBadge = row.querySelector('td:nth-child(3) .badge')?.textContent?.toLowerCase() || '';
-        const matches = !status || statusBadge.includes(status);
-        (row as HTMLElement).style.display = matches ? '' : 'none';
-      });
-    }
-    
-    statusFilter?.addEventListener('change', filterSubscriptions);
-  });
-</script>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Trialing</div>
+      <div class="stat-value text-info text-2xl">
+        {subscriptions.filter(s => s.subscription.status === 'trialing').length}
+      </div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Past Due</div>
+      <div class="stat-value text-warning text-2xl">
+        {subscriptions.filter(s => s.subscription.status === 'past_due').length}
+      </div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Canceled</div>
+      <div class="stat-value text-error text-2xl">
+        {subscriptions.filter(s => s.subscription.status === 'canceled').length}
+      </div>
+    </div>
+  </div>
+</AdminLayout>
