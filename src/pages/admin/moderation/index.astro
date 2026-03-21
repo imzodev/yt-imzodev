@@ -1,0 +1,178 @@
+---
+/**
+ * Admin Moderation page
+ * View and manage reported content.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import MetricCard from '../../../components/admin/MetricCard.astro';
+import postgres from 'postgres';
+import { getSession, isAdmin } from '../../../lib/server/auth';
+
+export const prerender = false;
+
+// Check if user is authenticated and admin
+const authResult = await getSession(Astro);
+const user = authResult?.user;
+
+if (!user) {
+  return Astro.redirect('/login?redirect=/admin/moderation');
+}
+
+// Check admin role
+const userIsAdmin = await isAdmin(user.id);
+if (!userIsAdmin) {
+  return Astro.redirect('/dashboard?error=unauthorized');
+}
+
+// Get database connection string for raw queries
+const connectionString = import.meta.env.DATABASE_URL ?? process.env.DATABASE_URL;
+const pgClient = postgres(connectionString);
+
+// Get moderation stats
+const openReportsResult = await pgClient`SELECT COUNT(*) as count FROM forum_reports WHERE status = 'open'`;
+const resolvedReportsResult = await pgClient`SELECT COUNT(*) as count FROM forum_reports WHERE status = 'resolved'`;
+const dismissedReportsResult = await pgClient`SELECT COUNT(*) as count FROM forum_reports WHERE status = 'dismissed'`;
+
+const openReports = Number(openReportsResult[0]?.count || 0);
+const resolvedReports = Number(resolvedReportsResult[0]?.count || 0);
+const dismissedReports = Number(dismissedReportsResult[0]?.count || 0);
+
+// Get all reports with details
+const allReportsResult = await pgClient`
+  SELECT 
+    r.id,
+    r.post_id,
+    r.reply_id,
+    r.reporter_id,
+    r.reason,
+    r.details,
+    r.status,
+    r.reviewed_by,
+    r.reviewed_at,
+    r.created_at,
+    p.title as post_title,
+    reporter.name as reporter_name
+  FROM forum_reports r
+  LEFT JOIN forum_posts p ON r.post_id = p.id
+  LEFT JOIN users reporter ON r.reporter_id = reporter.id
+  ORDER BY 
+    CASE WHEN r.status = 'open' THEN 1
+    WHEN r.status = 'resolved' THEN 2
+    ELSE 3
+  END,
+    r.created_at DESC
+  LIMIT 50
+`;
+
+// Close the connection
+await pgClient.end();
+
+const reports = allReportsResult.map((item: any) => ({
+  id: item.id,
+  postId: item.post_id,
+  replyId: item.reply_id,
+  reporterId: item.reporter_id,
+  reporterName: item.reporter_name,
+  reason: item.reason,
+  details: item.details,
+  status: item.status,
+  reviewedBy: item.reviewed_by,
+  reviewedAt: item.reviewed_at,
+  createdAt: item.created_at,
+  postTitle: item.post_title,
+}));
+
+const stats = {
+  openReports,
+  resolvedReports,
+  dismissedReports,
+};
+---
+
+<AdminLayout 
+  title="Moderation" 
+  description="Manage reported content"
+  activeNav="moderation"
+>
+  <!-- Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <MetricCard 
+      label="Open Reports" 
+      value={stats.openReports}
+      icon="alert"
+      variant="error"
+    />
+    <MetricCard 
+      label="Resolved" 
+      value={stats.resolvedReports}
+      icon="number"
+      variant="success"
+    />
+    <MetricCard 
+      label="Dismissed" 
+      value={stats.dismissedReports}
+      icon="number"
+      variant="warning"
+    />
+  </div>
+
+  <!-- Reports List -->
+  <div class="bg-base-100 shadow rounded-lg overflow-hidden">
+    <div class="p-6 border-b border-base-300">
+      <h2 class="text-xl font-semibold">All Reports</h2>
+    </div>
+    
+    {reports.length > 0 && (
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Type</th>
+              <th>Content</th>
+              <th>Reporter</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reports.map((report) => (
+              <tr>
+                <td>{report.id}</td>
+                <td>
+                  <span class={`badge badge-sm ${report.postId ? 'badge-info' : 'badge-warning'}`}>
+                    {report.postId ? 'Post' : 'Reply'}
+                  </span>
+                </td>
+                <td class="truncate max-w-xs">{report.postTitle || 'N/A'}</td>
+                <td>{report.reporterName || 'Unknown'}</td>
+                <td class="truncate max-w-xs">{report.reason}</td>
+                <td>
+                  <span class={`badge badge-sm ${
+                    report.status === 'open' ? 'badge-error' :
+                    report.status === 'resolved' ? 'badge-success' :
+                    'badge-warning'
+                  }`}>
+                    {report.status}
+                  </span>
+                </td>
+                <td class="text-sm">{new Date(report.createdAt).toLocaleDateString()}</td>
+                <td>
+                  <a href={`/admin/moderation/${report.id}`} class="btn btn-ghost btn-xs">View</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+    
+    {reports.length === 0 && (
+      <div class="text-center text-base-content/70 py-8">
+        No reports found
+      </div>
+    )}
+  </div>
+</AdminLayout>

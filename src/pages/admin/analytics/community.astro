@@ -1,0 +1,291 @@
+---
+/**
+ * Admin Community Analytics Page
+ * View forum activity metrics and moderation queue.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import MetricCard from '../../../components/admin/MetricCard.astro';
+import { db, forumPosts, forumReplies, forumReports, users } from '../../../db';
+import { count, desc, eq } from 'drizzle-orm';
+
+export const prerender = false;
+
+// Admin auth is handled by AdminLayout
+
+// Get community metrics
+const [
+  postStats,
+  replyStats,
+  reportStats,
+  openReportStats,
+  activeMembers,
+  pendingReports
+] = await Promise.all([
+  // Post stats (forum threads)
+  db.select({ count: count() }).from(forumPosts),
+  
+  // Reply stats
+  db.select({ count: count() }).from(forumReplies),
+  
+  // Report stats
+  db.select({ count: count() }).from(forumReports),
+  
+  // Open reports
+  db.select({ count: count() }).from(forumReports).where(eq(forumReports.status, 'open')),
+  
+  // Active members (top 5 - simplified)
+  db.select().from(users).limit(5),
+  
+  // Pending reports with details
+  db.select({
+    report: forumReports,
+    user: users,
+  })
+    .from(forumReports)
+    .leftJoin(users, eq(forumReports.reporterId, users.id))
+    .where(eq(forumReports.status, 'open'))
+    .orderBy(desc(forumReports.createdAt))
+    .limit(20)
+]);
+
+// Extract counts
+const totalPosts = postStats[0]?.count || 0;
+const totalReplies = replyStats[0]?.count || 0;
+const totalReports = reportStats[0]?.count || 0;
+const openReports = openReportStats[0]?.count || 0;
+
+// Calculate avg replies per post
+const avgRepliesPerPost = totalPosts > 0 ? Math.round(totalReplies / totalPosts * 10) / 10 : 0;
+
+// Flatten report data
+const reportData = pendingReports.map(({ report, user }) => ({
+  ...report,
+  reporter: user
+}));
+---
+
+<AdminLayout 
+  title="Community Analytics" 
+  description="Forum activity and moderation"
+  activeNav="dashboard"
+>
+  <!-- Forum Activity Stats -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">💬 Forum Activity</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricCard 
+        label="Total Threads" 
+        value={totalPosts}
+        icon="number"
+      />
+      <MetricCard 
+        label="Total Replies" 
+        value={totalReplies}
+        icon="number"
+        variant="info"
+      />
+      <MetricCard 
+        label="Avg Replies/Thread" 
+        value={avgRepliesPerPost}
+        icon="chart"
+      />
+      <MetricCard 
+        label="Open Reports" 
+        value={openReports}
+        icon="alert"
+        variant={openReports > 0 ? 'error' : 'success'}
+      />
+    </div>
+  </div>
+
+  <!-- Moderation Queue -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">🚨 Moderation Queue</h2>
+    
+    {openReports === 0 ? (
+      <div class="bg-base-100 shadow rounded-lg p-8 text-center">
+        <svg class="w-16 h-16 mx-auto mb-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <h3 class="text-lg font-bold mb-2">All Caught Up!</h3>
+        <p class="text-base-content/70">No pending reports to review</p>
+      </div>
+    ) : (
+      <div class="bg-base-100 shadow rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="table table-zebra w-full">
+            <thead>
+              <tr>
+                <th>Reporter</th>
+                <th>Reason</th>
+                <th>Target</th>
+                <th>Created</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.map(report => {
+                const reporter = report.reporter as { name?: string; email?: string } | null;
+                const initial = reporter?.name?.charAt(0) || reporter?.email?.charAt(0)?.toUpperCase() || '?';
+                const targetId = report.postId || report.replyId || 'N/A';
+                const targetType = report.postId ? 'Post' : report.replyId ? 'Reply' : 'Unknown';
+                
+                return (
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="avatar placeholder">
+                          <div class="bg-neutral text-neutral-content rounded-full w-8">
+                            <span class="text-xs">{initial}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <div class="font-medium">{reporter?.name || 'Anonymous'}</div>
+                          <div class="text-xs text-base-content/70">{reporter?.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-ghost badge-sm">{report.reason || 'No reason provided'}</span>
+                    </td>
+                    <td>
+                      <div class="text-sm">
+                        <div>{targetType}</div>
+                        <div class="text-base-content/70">ID: {targetId}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="text-sm text-base-content/70">
+                        {new Date(report.createdAt).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="flex gap-2 justify-center">
+                        <button 
+                          onclick={`resolveReport(${report.id}, 'resolved')`}
+                          class="btn btn-success btn-xs"
+                        >
+                          Resolve
+                        </button>
+                        <button 
+                          onclick={`resolveReport(${report.id}, 'dismissed')`}
+                          class="btn btn-ghost btn-xs"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- Most Active Members -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">⭐ Active Members</h2>
+    <div class="bg-base-100 shadow rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Role</th>
+              <th>Tier</th>
+              <th>Status</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activeMembers.map((member, index) => (
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="avatar placeholder">
+                      <div class="bg-neutral text-neutral-content rounded-full w-8">
+                        <span class="text-xs">{member.name?.charAt(0) || member.email?.charAt(0)?.toUpperCase() || '?'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="font-medium">{member.name || 'Unknown'}</div>
+                      <div class="text-xs text-base-content/70">{member.email}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class={`badge badge-sm ${
+                    member.role === 'admin' ? 'badge-error' :
+                    member.role === 'moderator' ? 'badge-warning' :
+                    'badge-ghost'
+                  }`}>
+                    {member.role || 'member'}
+                  </span>
+                </td>
+                <td>
+                  <span class={`badge badge-sm ${member.subscriptionTier === 'premium' ? 'badge-primary' : 'badge-ghost'}`}>
+                    {member.subscriptionTier || 'free'}
+                  </span>
+                </td>
+                <td>
+                  {member.isActive ? (
+                    <span class="text-success text-sm">Active</span>
+                  ) : (
+                    <span class="text-base-content/50 text-sm">Inactive</span>
+                  )}
+                </td>
+                <td class="text-sm text-base-content/70">
+                  {new Date(member.createdAt).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Stats Summary -->
+  <div class="bg-base-100 shadow rounded-lg p-6">
+    <h3 class="font-semibold mb-4 text-lg">📊 Moderation Summary</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <div class="text-sm text-base-content/70 mb-1">Total Reports</div>
+        <div class="text-3xl font-bold">{totalReports}</div>
+        <div class="text-sm text-base-content/70">All time</div>
+      </div>
+      <div>
+        <div class="text-sm text-base-content/70 mb-1">Pending</div>
+        <div class="text-3xl font-bold text-error">{openReports}</div>
+        <div class="text-sm text-base-content/70">Awaiting review</div>
+      </div>
+      <div>
+        <div class="text-sm text-base-content/70 mb-1">Resolved</div>
+        <div class="text-3xl font-bold text-success">{totalReports - openReports}</div>
+        <div class="text-sm text-base-content/70">Actioned</div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script define:vars={{ reportIds: reportData.map(r => r.id) }}>
+  function resolveReport(reportId, resolution) {
+    // Placeholder - would call API endpoint in production
+    const messages = {
+      resolved: `Report #${reportId} has been resolved.`,
+      dismissed: `Report #${reportId} has been dismissed.`
+    };
+    
+    alert(messages[resolution] || 'Action completed');
+    console.log(`Report Action: ${resolution}`, { reportId });
+    
+    // In production, this would:
+    // 1. Call POST /api/admin/moderation/:id/approve or /reject
+    // 2. Refresh the page or update the UI
+  }
+  
+  window.resolveReport = resolveReport;
+</script>

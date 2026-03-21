@@ -1,0 +1,225 @@
+---
+/**
+ * Admin Report Detail page
+ * View and resolve individual reports.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import postgres from 'postgres';
+import { getSession, isAdmin } from '../../../lib/server/auth';
+import { getCsrfToken } from '../../../lib/server/csrf';
+
+export const prerender = false;
+
+// Get report ID from URL
+const reportIdParam = Astro.url.pathname.split('/').pop();
+const reportId = reportIdParam ? parseInt(reportIdParam, 10) : NaN;
+
+if (isNaN(reportId)) {
+  return Astro.redirect('/admin/moderation?error=invalid-id');
+}
+
+// Check if user is authenticated and admin
+const authResult = await getSession(Astro);
+const user = authResult?.user;
+
+if (!user) {
+  return Astro.redirect('/login?redirect=/admin/moderation/' + reportId);
+}
+
+// Check admin role
+const userIsAdmin = await isAdmin(user.id);
+if (!userIsAdmin) {
+  return Astro.redirect('/dashboard?error=unauthorized');
+}
+
+// Get database connection string for raw queries
+const connectionString = import.meta.env.DATABASE_URL ?? process.env.DATABASE_URL;
+const pgClient = postgres(connectionString);
+
+// Get report with all details
+const reportResult = await pgClient`
+  SELECT 
+    r.id,
+    r.post_id,
+    r.reply_id,
+    r.reporter_id,
+    r.reason,
+    r.details,
+    r.status,
+    r.reviewed_by,
+    r.reviewed_at,
+    r.created_at,
+    p.title as post_title,
+    p.content as post_content,
+    fr.content as reply_content,
+    reporter.name as reporter_name,
+    reporter.email as reporter_email,
+    author.name as content_author_name
+  FROM forum_reports r
+  LEFT JOIN forum_posts p ON r.post_id = p.id
+  LEFT JOIN forum_replies fr ON r.reply_id = fr.id
+  LEFT JOIN users reporter ON r.reporter_id = reporter.id
+  LEFT JOIN users author ON COALESCE(p.author_id, fr.author_id) = author.id
+  WHERE r.id = ${reportId}
+`;
+
+await pgClient.end();
+
+const report = reportResult[0];
+
+if (!report) {
+  return Astro.redirect('/admin/moderation?error=report-not-found');
+}
+
+const csrfToken = getCsrfToken(Astro.cookies);
+---
+
+<AdminLayout 
+  title={`Report #${report.id}`} 
+  description="View and resolve report"
+  activeNav="moderation"
+>
+  <div class="mb-6">
+    <a href="/admin/moderation" class="btn btn-ghost btn-sm">
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to Reports
+    </a>
+  </div>
+
+  <!-- Report Details -->
+  <div class="bg-base-100 shadow rounded-lg mb-6">
+    <div class="p-6 border-b border-base-300">
+      <h2 class="text-xl font-semibold">Report Details</h2>
+    </div>
+    <div class="p-6">
+      <dl class="grid grid-cols-2 gap-4">
+        <div>
+          <dt class="text-sm text-base-content/70">Report ID</dt>
+          <dd class="font-medium">{report.id}</dd>
+        </div>
+        <div>
+          <dt class="text-sm text-base-content/70">Type</dt>
+          <dd>
+            <span class={`badge ${report.post_id ? 'badge-info' : 'badge-warning'}`}>
+              {report.post_id ? 'Post' : 'Reply'}
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm text-base-content/70">Status</dt>
+          <dd>
+            <span class={`badge ${
+              report.status === 'open' ? 'badge-error' :
+              report.status === 'resolved' ? 'badge-success' :
+              'badge-warning'
+            }`}>
+              {report.status}
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm text-base-content/70">Created</dt>
+          <dd class="font-medium">{new Date(report.created_at).toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt class="text-sm text-base-content/70">Reporter</dt>
+          <dd class="font-medium">{report.reporter_name || 'Unknown'}</dd>
+        </div>
+        <div class="col-span-2">
+          <dt class="text-sm text-base-content/70">Reason</dt>
+          <dd class="font-medium">{report.reason}</dd>
+        </div>
+        {report.details && (
+          <div class="col-span-2">
+            <dt class="text-sm text-base-content/70">Details</dt>
+            <dd class="font-medium">{report.details}</dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  </div>
+
+  <!-- Reported Content -->
+  <div class="bg-base-100 shadow rounded-lg mb-6">
+    <div class="p-6 border-b border-base-300">
+      <h2 class="text-xl font-semibold">Reported Content</h2>
+    </div>
+    <div class="p-6">
+      {report.post_title && (
+        <div class="mb-4">
+          <h3 class="font-semibold mb-2">{report.post_title}</h3>
+          <p class="text-sm text-base-content/70">by {report.content_author_name || 'Unknown'}</p>
+        </div>
+      )}
+      <div class="bg-base-200 rounded-lg p-4">
+        <p class="whitespace-pre-wrap">
+          {report.post_content || report.reply_content || 'No content available'}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  {report.status === 'open' && (
+    <div class="bg-base-100 shadow rounded-lg">
+      <div class="p-6 border-b border-base-300">
+        <h2 class="text-xl font-semibold">Actions</h2>
+      </div>
+      <div class="p-6">
+        <div class="flex flex-wrap gap-4">
+          <button 
+            class="btn btn-success"
+            hx-post="/api/admin/moderation/${report.id}/resolve"
+            hx-headers='{"Content-Type": "application/json"}'
+            hx-vals={`{"csrfToken": "${csrfToken}"}`}
+            hx-confirm="Mark this report as resolved?"
+            hx-target="body"
+            hx-swap="none"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Mark Resolved
+          </button>
+          <button 
+            class="btn btn-warning"
+            hx-post="/api/admin/moderation/${report.id}/dismiss"
+            hx-headers='{"Content-Type": "application/json"}'
+            hx-vals={`{"csrfToken": "${csrfToken}"}`}
+            hx-confirm="Dismiss this report?"
+            hx-target="body"
+            hx-swap="none"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {report.status !== 'open' && (
+    <div class="bg-base-100 shadow rounded-lg">
+      <div class="p-6 border-b border-base-300">
+        <h2 class="text-xl font-semibold">Resolution</h2>
+      </div>
+      <div class="p-6">
+        <p class="text-base-content/70">
+          This report was {report.status} on {new Date(report.reviewed_at).toLocaleDateString()}.
+        </p>
+      </div>
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+  document.body.addEventListener('htmx:afterRequest', (e) => {
+    if (e.detail?.xhr?.status === 200) {
+      window.location.href = '/admin/moderation';
+    }
+  });
+</script>
