@@ -1,5 +1,5 @@
 import { db, users, subscriptions, payments, subscriptionPlans, videos, blogPosts, snippets, forumPosts, forumReports } from '../../db';
-import { sql, eq, and, gte, lte, count, sum } from 'drizzle-orm';
+import { eq, and, gte, count, sum } from 'drizzle-orm';
 
 export interface RevenueMetrics {
   mrr: number;
