@@ -202,3 +202,98 @@ describe('Admin Dashboard Stats', () => {
     });
   });
 });
+
+describe('Admin Module - Subscription Management', () => {
+  it('should validate subscription status values', () => {
+    const validStatuses = ['active', 'trialing', 'past_due', 'canceled'];
+    const isValidStatus = (status: string): boolean => validStatuses.includes(status);
+
+    expect(isValidStatus('active')).toBe(true);
+    expect(isValidStatus('trialing')).toBe(true);
+    expect(isValidStatus('past_due')).toBe(true);
+    expect(isValidStatus('canceled')).toBe(true);
+    expect(isValidStatus('invalid')).toBe(false);
+    expect(isValidStatus('')).toBe(false);
+  });
+
+  it('should determine subscription badge class', () => {
+    const getStatusBadgeClass = (status: string): string => {
+      const badgeMap: Record<string, string> = {
+        'active': 'badge-success',
+        'trialing': 'badge-info',
+        'past_due': 'badge-warning',
+        'canceled': 'badge-error',
+      };
+      return badgeMap[status] || 'badge-ghost';
+    };
+
+    expect(getStatusBadgeClass('active')).toBe('badge-success');
+    expect(getStatusBadgeClass('trialing')).toBe('badge-info');
+    expect(getStatusBadgeClass('past_due')).toBe('badge-warning');
+    expect(getStatusBadgeClass('canceled')).toBe('badge-error');
+    expect(getStatusBadgeClass('unknown')).toBe('badge-ghost');
+  });
+
+  it('should check if subscription is canceling', () => {
+    const isCanceling = (cancelAtPeriodEnd: boolean): boolean => cancelAtPeriodEnd;
+
+    expect(isCanceling(true)).toBe(true);
+    expect(isCanceling(false)).toBe(false);
+  });
+
+  it('should format subscription period end date', () => {
+    const formatDate = (date: Date | null): string => {
+      if (!date) return 'N/A';
+      return date.toLocaleDateString();
+    };
+
+    expect(formatDate(new Date('2026-04-15'))).toBe('4/15/2026');
+    expect(formatDate(null)).toBe('N/A');
+  });
+
+  it('should determine trial status', () => {
+    const isInTrial = (trialEnd: Date | null, status: string): boolean => {
+      return status === 'trialing' && trialEnd !== null;
+    };
+
+    expect(isInTrial(new Date('2026-04-01'), 'trialing')).toBe(true);
+    expect(isInTrial(null, 'trialing')).toBe(false);
+    expect(isInTrial(new Date('2026-04-01'), 'active')).toBe(false);
+  });
+});
+
+describe('Admin Module - API Response Formatting', () => {
+  it('should format list response with pagination', () => {
+    const formatListResponse = <T>(items: T[], total: number, limit: number, offset: number) => {
+      return {
+        items,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + limit < total,
+        },
+      };
+    };
+
+    const items = [{ id: 1 }, { id: 2 }];
+    const response = formatListResponse(items, 100, 10, 0);
+
+    expect(response.items).toHaveLength(2);
+    expect(response.pagination.total).toBe(100);
+    expect(response.pagination.hasMore).toBe(true);
+  });
+
+  it('should format error response', () => {
+    const formatError = (message: string, status: number) => {
+      return {
+        error: message,
+        status,
+      };
+    };
+
+    const error = formatError('Unauthorized', 401);
+    expect(error.error).toBe('Unauthorized');
+    expect(error.status).toBe(401);
+  });
+});

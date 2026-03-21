@@ -263,6 +263,21 @@ export async function listSubscriptions(options: {
 }) {
   const { limit = 50, offset = 0, status } = options;
 
+  // Build query with optional status filter
+  if (status) {
+    const result = await db
+      .select({
+        subscription: subscriptions,
+        user: users,
+      })
+      .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .where(eq(subscriptions.status, status))
+      .limit(limit)
+      .offset(offset);
+    return result;
+  }
+
   const result = await db
     .select({
       subscription: subscriptions,

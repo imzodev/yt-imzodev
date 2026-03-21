@@ -10,8 +10,14 @@ import { listSubscriptions } from '../../../lib/server/admin';
 export const prerender = false;
 
 // Admin auth is handled by AdminLayout
-// Get subscriptions
-const subscriptions = await listSubscriptions({ limit: 100 });
+// Get filter from URL
+const urlStatus = Astro.url.searchParams.get('status');
+
+// Get subscriptions with optional status filter
+const subscriptions = await listSubscriptions({ 
+  limit: 100, 
+  status: urlStatus || undefined 
+});
 
 // Define table columns
 const columns = [
@@ -105,11 +111,11 @@ const tableData = subscriptions.map(({ subscription, user }) => ({
 >
   <!-- Status Filter Pills -->
   <div class="mb-6 flex flex-wrap gap-2">
-    <a href="/admin/subscriptions" class="btn btn-sm btn-ghost">All</a>
-    <a href="/admin/subscriptions?status=active" class="btn btn-sm btn-ghost text-success">Active</a>
-    <a href="/admin/subscriptions?status=trialing" class="btn btn-sm btn-ghost text-info">Trialing</a>
-    <a href="/admin/subscriptions?status=past_due" class="btn btn-sm btn-ghost text-warning">Past Due</a>
-    <a href="/admin/subscriptions?status=canceled" class="btn btn-sm btn-ghost text-error">Canceled</a>
+    <a href="/admin/subscriptions" class={`btn btn-sm ${!urlStatus ? 'btn-primary' : 'btn-ghost'}`}>All</a>
+    <a href="/admin/subscriptions?status=active" class={`btn btn-sm ${urlStatus === 'active' ? 'btn-success' : 'btn-ghost text-success'}`}>Active</a>
+    <a href="/admin/subscriptions?status=trialing" class={`btn btn-sm ${urlStatus === 'trialing' ? 'btn-info' : 'btn-ghost text-info'}`}>Trialing</a>
+    <a href="/admin/subscriptions?status=past_due" class={`btn btn-sm ${urlStatus === 'past_due' ? 'btn-warning' : 'btn-ghost text-warning'}`}>Past Due</a>
+    <a href="/admin/subscriptions?status=canceled" class={`btn btn-sm ${urlStatus === 'canceled' ? 'btn-error' : 'btn-ghost text-error'}`}>Canceled</a>
   </div>
 
   <!-- Subscriptions Table -->
