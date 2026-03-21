@@ -1,0 +1,248 @@
+---
+/**
+ * Admin Billing Analytics Page
+ * View revenue metrics, subscription health, and billing trends.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import MetricCard from '../../../components/admin/MetricCard.astro';
+import postgres from 'postgres';
+import { getSession, isAdmin } from '../../../lib/server/auth';
+
+export const prerender = false;
+
+// Check if user is authenticated and admin
+const authResult = await getSession(Astro);
+const user = authResult?.user;
+
+if (!user) {
+  return Astro.redirect('/login?redirect=/admin/analytics/billing');
+}
+
+// Check admin role
+const userIsAdmin = await isAdmin(user.id);
+if (!userIsAdmin) {
+  return Astro.redirect('/dashboard?error=unauthorized');
+}
+
+// Get database connection string for raw queries
+const connectionString = import.meta.env.DATABASE_URL ?? process.env.DATABASE_URL;
+const pgClient = postgres(connectionString);
+
+// Get subscription counts by status
+const subscriptionCounts = await pgClient`
+  SELECT 
+    status,
+    COUNT(*) as count
+  FROM subscriptions
+  GROUP BY status
+`;
+
+// Get total revenue from successful payments
+const revenueResult = await pgClient`
+  SELECT 
+    COALESCE(SUM(amount), 0) as total_revenue
+  FROM payments
+  WHERE status = 'succeeded'
+`;
+
+// Get payment success/failure rates
+const paymentStats = await pgClient`
+  SELECT 
+    status,
+    COUNT(*) as count
+  FROM payments
+  GROUP BY status
+`;
+
+// Get recent subscription changes (last 30 days)
+const recentChanges = await pgClient`
+  SELECT 
+    status,
+    COUNT(*) as count
+  FROM subscriptions
+  WHERE updated_at > NOW() - INTERVAL '30 days'
+  GROUP BY status
+`;
+
+// Get user tier distribution
+const tierDistribution = await pgClient`
+  SELECT 
+    subscription_tier,
+    COUNT(*) as count
+  FROM users
+  GROUP BY subscription_tier
+`;
+
+await pgClient.end();
+
+// Calculate metrics
+const subscriptionStats = {
+  active: Number(subscriptionCounts.find((s: any) => s.status === 'active')?.count || 0),
+  trialing: Number(subscriptionCounts.find((s: any) => s.status === 'trialing')?.count || 0),
+  pastDue: Number(subscriptionCounts.find((s: any) => s.status === 'past_due')?.count || 0),
+  canceled: Number(subscriptionCounts.find((s: any) => s.status === 'canceled')?.count || 0),
+};
+
+const totalRevenue = Number(revenueResult[0]?.total_revenue || 0) / 100;
+
+const successfulPayments = Number(paymentStats.find((p: any) => p.status === 'succeeded')?.count || 0);
+const failedPayments = Number(paymentStats.find((p: any) => p.status === 'failed')?.count || 0);
+const totalPayments = successfulPayments + failedPayments;
+const successRate = totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0;
+
+// MRR calculation (simplified - assumes $9.99/month average)
+const avgMonthlyPrice = 9.99;
+const mrr = subscriptionStats.active * avgMonthlyPrice;
+const arr = mrr * 12;
+
+// Churn rate (simplified)
+const churnRate = subscriptionStats.active > 0 
+  ? (subscriptionStats.canceled / (subscriptionStats.active + subscriptionStats.canceled)) * 100 
+  : 0;
+
+const tierStats = {
+  free: Number(tierDistribution.find((t: any) => t.subscription_tier === 'free')?.count || 0),
+  premium: Number(tierDistribution.find((t: any) => t.subscription_tier === 'premium')?.count || 0),
+};
+---
+
+<AdminLayout 
+  title="Billing Analytics" 
+  description="Revenue metrics and subscription health"
+  activeNav="analytics"
+>
+  <!-- Revenue Metrics -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">💰 Revenue</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricCard 
+        label="MRR" 
+        value={`$${mrr.toFixed(2)}`}
+        icon="currency"
+        variant="success"
+      />
+      <MetricCard 
+        label="ARR" 
+        value={`$${arr.toFixed(2)}`}
+        icon="chart"
+        variant="success"
+      />
+      <MetricCard 
+        label="Total Revenue" 
+        value={`$${totalRevenue.toFixed(2)}`}
+        icon="currency"
+      />
+      <MetricCard 
+        label="Success Rate" 
+        value={`${successRate.toFixed(1)}%`}
+        icon="percent"
+        variant={successRate > 95 ? 'success' : 'warning'}
+      />
+    </div>
+  </div>
+
+  <!-- Subscription Health -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">📊 Subscription Health</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricCard 
+        label="Active" 
+        value={subscriptionStats.active}
+        icon="number"
+        variant="success"
+      />
+      <MetricCard 
+        label="Trialing" 
+        value={subscriptionStats.trialing}
+        icon="number"
+        variant="info"
+      />
+      <MetricCard 
+        label="Past Due" 
+        value={subscriptionStats.pastDue}
+        icon="alert"
+        variant="warning"
+      />
+      <MetricCard 
+        label="Churn Rate" 
+        value={`${churnRate.toFixed(1)}%`}
+        icon="percent"
+        variant={churnRate > 5 ? 'error' : 'warning'}
+      />
+    </div>
+  </div>
+
+  <!-- User Tier Distribution -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">👥 User Tiers</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-base-100 shadow rounded-lg p-6">
+        <div class="text-sm text-base-content/70">Free Users</div>
+        <div class="text-3xl font-bold">{tierStats.free}</div>
+        <div class="text-sm text-base-content/70 mt-2">
+          {tierStats.free + tierStats.premium > 0 
+            ? ((tierStats.free / (tierStats.free + tierStats.premium)) * 100).toFixed(1) 
+            : 0}% of total
+        </div>
+      </div>
+      <div class="bg-base-100 shadow rounded-lg p-6">
+        <div class="text-sm text-base-content/70">Premium Users</div>
+        <div class="text-3xl font-bold text-success">{tierStats.premium}</div>
+        <div class="text-sm text-base-content/70 mt-2">
+          {tierStats.free + tierStats.premium > 0 
+            ? ((tierStats.premium / (tierStats.free + tierStats.premium)) * 100).toFixed(1) 
+            : 0}% of total
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Status -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">💳 Payment Status</h2>
+    <div class="bg-base-100 shadow rounded-lg p-6">
+      <div class="flex items-center justify-between mb-4">
+        <span>Successful Payments</span>
+        <span class="font-bold text-success">{successfulPayments}</span>
+      </div>
+      <div class="flex items-center justify-between mb-4">
+        <span>Failed Payments</span>
+        <span class="font-bold text-error">{failedPayments}</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <span>Total Attempts</span>
+        <span class="font-bold">{totalPayments}</span>
+      </div>
+      
+      {totalPayments > 0 && (
+        <div class="mt-4">
+          <div class="text-sm text-base-content/70 mb-2">Success Rate</div>
+          <progress 
+            class={`progress ${successRate > 95 ? 'progress-success' : successRate > 80 ? 'progress-warning' : 'progress-error'}`}
+            value={successRate}
+            max="100"
+          />
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="bg-base-100 shadow rounded-lg p-6">
+    <h3 class="font-semibold mb-4">Quick Actions</h3>
+    <div class="flex flex-wrap gap-4">
+      <a href="/admin/payments" class="btn btn-primary">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        View Failed Payments
+      </a>
+      <a href="/admin/subscriptions" class="btn btn-outline">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Manage Subscriptions
+      </a>
+    </div>
+  </div>
+</AdminLayout>
