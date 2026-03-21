@@ -1,0 +1,264 @@
+---
+/**
+ * Admin Dashboard Page
+ * Main dashboard with platform metrics and management links.
+ */
+import AdminLayout from '../../components/admin/AdminLayout.astro';
+import MetricCard from '../../components/admin/MetricCard.astro';
+import { getDashboardStats } from '../../lib/server/admin';
+
+export const prerender = false;
+
+// Admin auth is handled by AdminLayout
+// Get dashboard stats
+const stats = await getDashboardStats();
+---
+
+<AdminLayout 
+  title="Dashboard" 
+  description="Platform analytics and management"
+  activeNav="dashboard"
+>
+  <!-- Revenue Metrics -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">💰 Revenue</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <MetricCard 
+        label="MRR" 
+        value={`$${stats.revenue.mrr}`}
+        icon="currency"
+        variant="success"
+      />
+      <MetricCard 
+        label="ARR" 
+        value={`$${stats.revenue.arr}`}
+        icon="chart"
+        variant="success"
+      />
+      <MetricCard 
+        label="Total Revenue" 
+        value={`$${stats.revenue.totalRevenue}`}
+        icon="currency"
+      />
+      <MetricCard 
+        label="Active Subscriptions" 
+        value={stats.revenue.activeSubscriptions}
+        icon="number"
+        variant="info"
+      />
+      <MetricCard 
+        label="Churn Rate" 
+        value={`${stats.revenue.churnRate}%`}
+        icon="percent"
+        variant="warning"
+      />
+      <MetricCard 
+        label="Payment Success" 
+        value={`${stats.revenue.paymentSuccessRate}%`}
+        icon="percent"
+        variant="success"
+      />
+    </div>
+  </div>
+
+  <!-- User Metrics -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">👥 Users</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <MetricCard 
+        label="Total Users" 
+        value={stats.users.totalUsers}
+        icon="users"
+        size="sm"
+      />
+      <MetricCard 
+        label="Active Users" 
+        value={stats.users.activeUsers}
+        icon="users"
+        variant="success"
+        size="sm"
+      />
+      <MetricCard 
+        label="New This Month" 
+        value={stats.users.newUsersThisMonth}
+        icon="users"
+        variant="info"
+        size="sm"
+      />
+      <MetricCard 
+        label="Premium Users" 
+        value={stats.users.premiumUsers}
+        icon="users"
+        variant="warning"
+        size="sm"
+      />
+      <MetricCard 
+        label="Free Users" 
+        value={stats.users.freeUsers}
+        icon="users"
+        size="sm"
+      />
+    </div>
+  </div>
+
+  <!-- Content Metrics -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4">📚 Content</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <MetricCard 
+        label="Videos" 
+        value={stats.content.totalVideos}
+        size="sm"
+      />
+      <MetricCard 
+        label="Blog Posts" 
+        value={stats.content.totalBlogPosts}
+        size="sm"
+      />
+      <MetricCard 
+        label="Snippets" 
+        value={stats.content.totalSnippets}
+        size="sm"
+      />
+      <MetricCard 
+        label="Forum Posts" 
+        value={stats.content.totalForumPosts}
+        size="sm"
+      />
+      <MetricCard 
+        label="Pending Reports" 
+        value={stats.content.pendingReports}
+        variant="error"
+        icon="alert"
+        size="sm"
+      />
+    </div>
+  </div>
+
+  <!-- Quick Links -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- User Management -->
+    <div class="bg-base-100 shadow rounded-lg">
+      <div class="p-6 border-b border-base-300 flex justify-between items-center">
+        <h2 class="text-xl font-semibold">User Management</h2>
+        <a href="/admin/users" class="btn btn-primary btn-sm">View All</a>
+      </div>
+      <div class="p-6">
+        <p class="text-base-content/70">Manage user accounts, roles, and subscriptions.</p>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            List and search users
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Update user roles
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Suspend/restore accounts
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Subscription Management -->
+    <div class="bg-base-100 shadow rounded-lg">
+      <div class="p-6 border-b border-base-300 flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Subscriptions</h2>
+        <a href="/admin/subscriptions" class="btn btn-primary btn-sm">View All</a>
+      </div>
+      <div class="p-6">
+        <p class="text-base-content/70">View and manage subscription statuses.</p>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Active subscriptions
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Trial periods
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Canceled subscriptions
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Failed Payments -->
+    <div class="bg-base-100 shadow rounded-lg">
+      <div class="p-6 border-b border-base-300 flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Failed Payments</h2>
+        <a href="/admin/payments" class="btn btn-primary btn-sm">View All</a>
+      </div>
+      <div class="p-6">
+        <p class="text-base-content/70">Handle failed payment attempts and dunning.</p>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            View failed attempts
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Retry payments
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Send reminders
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Newsletter -->
+    <div class="bg-base-100 shadow rounded-lg">
+      <div class="p-6 border-b border-base-300 flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Newsletter</h2>
+        <a href="/admin/newsletter" class="btn btn-primary btn-sm">Manage</a>
+      </div>
+      <div class="p-6">
+        <p class="text-base-content/70">Create and send newsletter campaigns.</p>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Campaign management
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Analytics tracking
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Subscriber management
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</AdminLayout>

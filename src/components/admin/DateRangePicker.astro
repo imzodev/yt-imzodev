@@ -1,0 +1,163 @@
+---
+/**
+ * DateRangePicker.astro
+ * Reusable date range picker component for analytics filtering.
+ * 
+ * @props startDate - Initial start date (ISO string)
+ * @props endDate - Initial end date (ISO string)
+ * @props presets - Array of preset options (e.g., 'last7days', 'last30days')
+ * @props label - Label for the picker
+ * @props name - Form field name prefix
+ * @props onChange - Optional client-side callback name
+ */
+
+export interface Preset {
+  label: string;
+  value: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface Props {
+  startDate?: string;
+  endDate?: string;
+  presets?: Preset[];
+  label?: string;
+  name?: string;
+  id?: string;
+}
+
+// Default presets
+const defaultPresets: Preset[] = [
+  { label: 'Today', value: 'today', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] },
+  { label: 'Last 7 Days', value: 'last7days', startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] },
+  { label: 'Last 30 Days', value: 'last30days', startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] },
+  { label: 'This Month', value: 'thismonth', startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] },
+  { label: 'Last Month', value: 'lastmonth', startDate: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().split('T')[0], endDate: new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().split('T')[0] },
+  { label: 'This Year', value: 'thisyear', startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] },
+];
+
+const {
+  startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  endDate = new Date().toISOString().split('T')[0],
+  presets = defaultPresets,
+  label = 'Date Range',
+  name = 'date_range',
+  id = `date-range-${Math.random().toString(36).slice(2, 9)}`
+} = Astro.props;
+---
+
+<div class="flex flex-wrap items-end gap-3" id={id}>
+  {label && (
+    <div class="w-full sm:w-auto">
+      <label class="label">
+        <span class="label-text font-medium">{label}</span>
+      </label>
+    </div>
+  )}
+  
+  <!-- Preset Dropdown -->
+  <div class="w-full sm:w-auto">
+    <select 
+      class="select select-bordered w-full sm:w-40"
+      name={`${name}_preset`}
+      data-date-presets={id}
+    >
+      <option value="">Custom Range</option>
+      {presets.map((preset) => (
+        <option value={preset.value} data-start={preset.startDate} data-end={preset.endDate}>
+          {preset.label}
+        </option>
+      ))}
+    </select>
+  </div>
+  
+  <!-- Start Date -->
+  <div class="w-full sm:w-auto">
+    <label class="label sm:sr-only">
+      <span class="label-text">Start Date</span>
+    </label>
+    <input 
+      type="date" 
+      class="input input-bordered w-full sm:w-40"
+      name={`${name}_start`}
+      value={startDate}
+      data-date-start={id}
+    />
+  </div>
+  
+  <span class="hidden sm:flex items-center text-base-content/60">to</span>
+  
+  <!-- End Date -->
+  <div class="w-full sm:w-auto">
+    <label class="label sm:sr-only">
+      <span class="label-text">End Date</span>
+    </label>
+    <input 
+      type="date" 
+      class="input input-bordered w-full sm:w-40"
+      name={`${name}_end`}
+      value={endDate}
+      data-date-end={id}
+    />
+  </div>
+  
+  <!-- Apply Button -->
+  <button 
+    type="button" 
+    class="btn btn-primary w-full sm:w-auto"
+    data-date-apply={id}
+  >
+    Apply
+  </button>
+</div>
+
+<script define:vars={{ id }}>
+  const container = document.getElementById(id);
+  if (container) {
+    const presetSelect = container.querySelector(`[data-date-presets="${id}"]`);
+    const startInput = container.querySelector(`[data-date-start="${id}"]`);
+    const endInput = container.querySelector(`[data-date-end="${id}"]`);
+    const applyBtn = container.querySelector(`[data-date-apply="${id}"]`);
+    
+    // Handle preset selection
+    presetSelect?.addEventListener('change', (e) => {
+      const selected = e.target.options[e.target.selectedIndex];
+      const start = selected.dataset.start;
+      const end = selected.dataset.end;
+      
+      if (start && end && startInput && endInput) {
+        startInput.value = start;
+        endInput.value = end;
+      }
+    });
+    
+    // Clear preset when dates are manually changed
+    startInput?.addEventListener('change', () => {
+      if (presetSelect) presetSelect.value = '';
+    });
+    
+    endInput?.addEventListener('change', () => {
+      if (presetSelect) presetSelect.value = '';
+    });
+    
+    // Apply button - trigger form submit or custom event
+    applyBtn?.addEventListener('click', () => {
+      const event = new CustomEvent('daterange:apply', {
+        detail: {
+          start: startInput?.value,
+          end: endInput?.value,
+          preset: presetSelect?.value
+        },
+        bubbles: true
+      });
+      container.dispatchEvent(event);
+      
+      // Also submit the closest form if it exists
+      const form = container.closest('form');
+      if (form) {
+        form.submit();
+      }
+    });
+  }
+</script>

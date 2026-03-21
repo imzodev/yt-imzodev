@@ -1,5 +1,7 @@
 import type { AstroGlobal } from 'astro';
 import { getSupabaseServerClient } from '../supabase';
+import { db, users } from '../../db';
+import { eq } from 'drizzle-orm';
 
 /**
  * Validates the user session.
@@ -34,4 +36,68 @@ export async function getUserProfile(supabase: ReturnType<typeof getSupabaseServ
     .single();
     
   return { profile, error };
+}
+
+/**
+ * Checks if a user has admin role.
+ * @param supabaseUserId - The Supabase Auth user ID
+ * @returns true if user has admin role, false otherwise
+ */
+export async function isAdmin(supabaseUserId: string): Promise<boolean> {
+  if (!supabaseUserId) return false;
+  
+  try {
+    const [user] = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.supabaseUserId, supabaseUserId))
+      .limit(1);
+    
+    return user?.role === 'admin';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks if a user has moderator or admin role.
+ * @param supabaseUserId - The Supabase Auth user ID
+ * @returns true if user has moderator or admin role, false otherwise
+ */
+export async function isModerator(supabaseUserId: string): Promise<boolean> {
+  if (!supabaseUserId) return false;
+  
+  try {
+    const [user] = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.supabaseUserId, supabaseUserId))
+      .limit(1);
+    
+    return user?.role === 'admin' || user?.role === 'moderator';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Middleware helper to require admin access.
+ * Redirects non-admin users and returns the user ID for admin users.
+ * @param Astro - The Astro global object
+ * @returns Object with userId if admin, or redirect response
+ */
+export async function requireAdmin(Astro: AstroGlobal): Promise<{ userId: string } | Response> {
+  const authResult = await getSession(Astro);
+  const user = authResult?.user;
+
+  if (!user) {
+    return Astro.redirect('/login?redirect=' + encodeURIComponent(Astro.url.pathname));
+  }
+
+  const userIsAdmin = await isAdmin(user.id);
+  if (!userIsAdmin) {
+    return Astro.redirect('/dashboard?error=unauthorized');
+  }
+
+  return { userId: user.id };
 }
