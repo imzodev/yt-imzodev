@@ -2,7 +2,7 @@
 import Layout from '../../../layouts/Layout.astro';
 import Navbar from '../../../components/Navbar.astro';
 import Alert from '../../../components/ui/Alert.astro';
-import { getSession } from '../../../lib/server/auth';
+import { getSession, isAdmin } from '../../../lib/server/auth';
 import { getCsrfToken } from '../../../lib/server/csrf';
 import { listCampaigns, getNewsletterStats } from '../../../lib/server/newsletter-campaigns';
 
@@ -16,8 +16,11 @@ if (!user) {
   return Astro.redirect('/login?redirect=/admin/newsletter');
 }
 
-// TODO: Add admin role check
-// For now, any authenticated user can access
+// Admin role check
+const userIsAdmin = await isAdmin(user.id);
+if (!userIsAdmin) {
+  return Astro.redirect('/dashboard?error=unauthorized');
+}
 
 // Fetch campaign data
 const campaigns = await listCampaigns(20);

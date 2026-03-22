@@ -1,7 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import Navbar from '../../../components/Navbar.astro';
-import { getSession } from '../../../lib/server/auth';
+import { getSession, isAdmin } from '../../../lib/server/auth';
 import { getCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
@@ -12,6 +12,12 @@ const user = authResult?.user;
 
 if (!user) {
   return Astro.redirect('/login?redirect=/admin/newsletter/new');
+}
+
+// Admin role check
+const userIsAdmin = await isAdmin(user.id);
+if (!userIsAdmin) {
+  return Astro.redirect('/dashboard?error=unauthorized');
 }
 
 const csrfToken = getCsrfToken(Astro.cookies);

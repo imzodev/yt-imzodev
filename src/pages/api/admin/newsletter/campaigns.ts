@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { listCampaigns, createCampaign, sendCampaign, getCampaignAnalytics, getNewsletterStats } from '../../../../lib/server/newsletter-campaigns';
-import { getSession } from '../../../../lib/server/auth';
+import { getSession, checkAdminAccess } from '../../../../lib/server/auth';
 
 export const prerender = false;
 
@@ -12,6 +12,11 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  const adminCheck = await checkAdminAccess(authResult.user.id);
+  if (!adminCheck.authorized) {
+    return adminCheck.error;
   }
 
   const action = url.searchParams.get('action');
@@ -71,6 +76,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  const adminCheck = await checkAdminAccess(authResult.user.id);
+  if (!adminCheck.authorized) {
+    return adminCheck.error;
   }
 
   try {

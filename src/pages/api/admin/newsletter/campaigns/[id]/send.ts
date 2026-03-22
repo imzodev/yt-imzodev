@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { sendCampaign, getCampaign } from '../../../../../../lib/server/newsletter-campaigns';
-import { getSession } from '../../../../../../lib/server/auth';
+import { getSession, checkAdminAccess } from '../../../../../../lib/server/auth';
 
 export const prerender = false;
 
@@ -14,7 +14,11 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     });
   }
 
-  // TODO: Add admin role check
+  // Admin role check
+  const adminCheck = await checkAdminAccess(authResult.user.id);
+  if (!adminCheck.authorized) {
+    return adminCheck.error;
+  }
 
   const campaignIdStr = params.id as string;
   if (!campaignIdStr) {
