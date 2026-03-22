@@ -1,43 +1,24 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import Navbar from '../../../components/Navbar.astro';
-import { getSession, isAdmin } from '../../../lib/server/auth';
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import { getCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
 
-// Check if user is authenticated
-const authResult = await getSession(Astro);
-const user = authResult?.user;
-
-if (!user) {
-  return Astro.redirect('/login?redirect=/admin/newsletter/new');
-}
-
-// Admin role check
-const userIsAdmin = await isAdmin(user.id);
-if (!userIsAdmin) {
-  return Astro.redirect('/dashboard?error=unauthorized');
-}
-
 const csrfToken = getCsrfToken(Astro.cookies);
 ---
 
-<Layout title="Create Campaign - Newsletter Admin">
-  <Navbar />
-  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl mx-auto">
-      <!-- Header -->
-      <div class="mb-8">
-        <a href="/admin/newsletter" class="btn btn-ghost btn-sm mb-4">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Campaigns
-        </a>
-        <h1 class="text-3xl font-bold">Create Campaign</h1>
-        <p class="text-base-content/70 mt-2">Compose a new newsletter for your subscribers</p>
-      </div>
+<AdminLayout 
+  title="Create Campaign" 
+  description="Compose a new newsletter for your subscribers"
+  activeNav="newsletter"
+>
+  <div class="max-w-4xl">
+    <a href="/admin/newsletter" class="btn btn-ghost btn-sm mb-6">
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to Campaigns
+    </a>
 
       <form 
         id="campaign-form" 
@@ -116,6 +97,5 @@ const csrfToken = getCsrfToken(Astro.cookies);
           </button>
         </div>
       </form>
-    </div>
-  </main>
-</Layout>
+  </div>
+</AdminLayout>

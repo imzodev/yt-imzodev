@@ -1,26 +1,10 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import Navbar from '../../../components/Navbar.astro';
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import Alert from '../../../components/ui/Alert.astro';
-import { getSession, isAdmin } from '../../../lib/server/auth';
 import { getCsrfToken } from '../../../lib/server/csrf';
 import { listCampaigns, getNewsletterStats } from '../../../lib/server/newsletter-campaigns';
 
 export const prerender = false;
-
-// Check if user is authenticated
-const authResult = await getSession(Astro);
-const user = authResult?.user;
-
-if (!user) {
-  return Astro.redirect('/login?redirect=/admin/newsletter');
-}
-
-// Admin role check
-const userIsAdmin = await isAdmin(user.id);
-if (!userIsAdmin) {
-  return Astro.redirect('/dashboard?error=unauthorized');
-}
 
 // Fetch campaign data
 const campaigns = await listCampaigns(20);
@@ -32,15 +16,11 @@ const csrfToken = getCsrfToken(Astro.cookies);
 const recentEvents: any[] = [];
 ---
 
-<Layout title="Newsletter Admin - YouTube Community Portal">
-  <Navbar />
-  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold">Newsletter Admin</h1>
-        <p class="text-base-content/70 mt-2">Manage email campaigns and track analytics</p>
-      </div>
+<AdminLayout 
+  title="Newsletter" 
+  description="Manage email campaigns and track analytics"
+  activeNav="newsletter"
+>
 
       <!-- Stats Overview -->
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
@@ -209,6 +189,4 @@ const recentEvents: any[] = [];
           </div>
         </div>
       </div>
-    </div>
-  </main>
-</Layout>
+</AdminLayout>

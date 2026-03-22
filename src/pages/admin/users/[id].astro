@@ -3,9 +3,7 @@
  * Admin User Detail Page
  * Shows detailed user information with management actions.
  */
-import Layout from '../../../layouts/Layout.astro';
-import Navbar from '../../../components/Navbar.astro';
-import { getSession, isAdmin } from '../../../lib/server/auth';
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import { getCsrfToken } from '../../../lib/server/csrf';
 import { getUserWithSubscription, updateUserRole, setUserActiveStatus } from '../../../lib/server/admin';
 
@@ -19,20 +17,6 @@ if (isNaN(userId)) {
   return Astro.redirect('/admin/users?error=invalid-id');
 }
 
-// Check if user is authenticated
-const authResult = await getSession(Astro);
-const currentUser = authResult?.user;
-
-if (!currentUser) {
-  return Astro.redirect('/login?redirect=/admin/users/' + userId);
-}
-
-// Check admin role
-const userIsAdmin = await isAdmin(currentUser.id);
-if (!userIsAdmin) {
-  return Astro.redirect('/dashboard?error=unauthorized');
-}
-
 // Get user data
 const userData = await getUserWithSubscription(userId);
 
@@ -44,10 +28,12 @@ const { user, subscription } = userData;
 const csrfToken = getCsrfToken(Astro.cookies);
 ---
 
-<Layout title={`User: ${user.name || user.email} - Admin Dashboard`}>
-  <Navbar />
-  <main class="min-h-screen bg-base-200 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl mx-auto">
+<AdminLayout 
+  title={`User: ${user.name || user.email}`}
+  description="Manage user account and subscription"
+  activeNav="users"
+>
+  <div class="max-w-4xl">
       <!-- Header -->
       <div class="mb-8">
         <a href="/admin/users" class="btn btn-ghost btn-sm mb-4">
@@ -275,9 +261,8 @@ const csrfToken = getCsrfToken(Astro.cookies);
           </button>
         </div>
       </div>
-    </div>
-  </main>
-</Layout>
+  </div>
+</AdminLayout>
 
 <script>
   // Handle HTMX responses
