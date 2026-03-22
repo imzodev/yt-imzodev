@@ -16,12 +16,9 @@ export interface Props {
   activeNav?: string;
 }
 
-// Verify admin access
+// Verify admin access - must be first to handle redirects
 const authResult = await requireAdmin(Astro);
-if (authResult instanceof Response) {
-  // This is a redirect response
-  return authResult;
-}
+if (authResult instanceof Response) return authResult;
 
 const { title, description, activeNav = '' } = Astro.props;
 
