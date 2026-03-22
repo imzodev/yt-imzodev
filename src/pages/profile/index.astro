@@ -1,6 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import Navbar from '../../components/Navbar.astro';
+import MemberLayout from '../../components/member/MemberLayout.astro';
 import Alert from '../../components/ui/Alert.astro';
 import { getSession } from '../../lib/server/auth';
 import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
@@ -94,8 +93,11 @@ if (profile?.email) {
 const csrfToken = getCsrfToken(Astro.cookies);
 ---
 
-<Layout title="Your Profile - YouTube Community Portal">
-  <Navbar />
+<MemberLayout 
+  title="Profile" 
+  description="Manage your account settings and preferences"
+  activeNav="profile"
+>
   <main class="min-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto space-y-8 mt-16">
       
@@ -360,4 +362,4 @@ const csrfToken = getCsrfToken(Astro.cookies);
       }
     });
   </script>
-</Layout>
+</MemberLayout>

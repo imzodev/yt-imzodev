@@ -1,134 +1,257 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import { getSession, getUserProfile } from '../lib/server/auth';
+import MemberLayout from '../components/member/MemberLayout.astro';
+import { getSession } from '../lib/server/auth';
+import { getUserDashboardData } from '../lib/server/dashboard';
+import { getViewerBySupabaseId } from '../lib/server/forum';
 
 export const prerender = false;
 
 // Check if user is authenticated
 const authResult = await getSession(Astro, { requireAuth: true });
 if (authResult instanceof Response) return authResult;
-const { user, supabase } = authResult;
+const { user } = authResult;
 
-// We know user exists here because requireAuth is true
-const { profile } = await getUserProfile(supabase, user!.id);
+// Get viewer profile and dashboard data
+const viewer = await getViewerBySupabaseId(user!.id);
+const dashboardData = viewer ? await getUserDashboardData(viewer.id) : null;
+
+// Lab tools list
+const labTools = [
+  { name: 'Code Formatter', slug: 'code-formatter', icon: '🎨' },
+  { name: 'Color Palette', slug: 'color-palette', icon: '🎨' },
+  { name: 'Regex Tester', slug: 'regex-tester', icon: '🔍' },
+  { name: 'JSON Validator', slug: 'json-validator', icon: '✓' },
+  { name: 'Password Generator', slug: 'password-generator', icon: '🔐' },
+];
+
+// Format date helper
+function formatDate(date: Date | null): string {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return d.toLocaleDateString();
+}
 ---
 
-<Layout title="Dashboard - YouTube Community Portal">
-  <main class="min-h-screen bg-base-200">
-    <!-- Navigation -->
-    <nav class="bg-base-100 shadow-sm border-b border-base-300">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex items-center">
-            <h1 class="text-xl font-semibold text-base-content">YouTube Community Portal</h1>
+<MemberLayout 
+  title="Dashboard" 
+  description="Your personalized member hub"
+  activeNav="dashboard"
+>
+  <!-- Welcome Section -->
+  <div class="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-2">
+      Welcome back, {viewer?.name || viewer?.username || 'Member'}! 👋
+    </h2>
+    <p class="text-base-content/70">
+      Your personalized dashboard with everything you need to engage with the community.
+    </p>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="stats shadow">
+      <div class="stat">
+        <div class="stat-title">Forum Posts</div>
+        <div class="stat-value text-primary">{dashboardData?.stats.forumPosts || 0}</div>
+      </div>
+    </div>
+    <div class="stats shadow">
+      <div class="stat">
+        <div class="stat-title">Replies</div>
+        <div class="stat-value text-secondary">{dashboardData?.stats.forumReplies || 0}</div>
+      </div>
+    </div>
+    <div class="stats shadow">
+      <div class="stat">
+        <div class="stat-title">Comments</div>
+        <div class="stat-value text-accent">{dashboardData?.stats.blogComments || 0}</div>
+      </div>
+    </div>
+    <div class="stats shadow">
+      <div class="stat">
+        <div class="stat-title">Videos Watched</div>
+        <div class="stat-value text-info">{dashboardData?.stats.videoViews || 0}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Forum Activity & Recent Videos -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Forum Activity -->
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="card-title">💬 Your Forum Activity</h3>
+            <a href="/forum" class="btn btn-primary btn-sm">View Forum</a>
           </div>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-base-content/70">
-              {profile?.email || user?.email}
-            </span>
-            <form method="POST" action="/api/auth/logout">
-              <button type="submit" class="btn btn-secondary">
-                Sign Out
-              </button>
-            </form>
+          {dashboardData?.forumActivity && dashboardData.forumActivity.length > 0 ? (
+            <div class="space-y-3">
+              {dashboardData.forumActivity.map((item) => (
+                <a href={`/forum/thread/${item.postId}`} class="block p-3 rounded-lg hover:bg-base-200 transition-colors">
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <p class="font-medium">{item.title}</p>
+                      <div class="flex items-center gap-3 mt-1 text-sm text-base-content/60">
+                        <span class="badge badge-sm">{item.type}</span>
+                        <span>{formatDate(item.createdAt)}</span>
+                        {item.type === 'post' && item.replyCount > 0 && (
+                          <span>{item.replyCount} replies</span>
+                        )}
+                      </div>
+                    </div>
+                    <svg class="w-5 h-5 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div class="text-center py-8">
+              <svg class="w-12 h-12 mx-auto text-base-content/20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
+              </svg>
+              <p class="text-base-content/60 mb-3">No forum activity yet</p>
+              <a href="/forum" class="btn btn-primary btn-sm">Start a Discussion</a>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <!-- Recently Watched Videos -->
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="card-title">📺 Recently Watched</h3>
+            <a href="/videos" class="btn btn-primary btn-sm">Browse Videos</a>
+          </div>
+          {dashboardData?.recentVideos && dashboardData.recentVideos.length > 0 ? (
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {dashboardData.recentVideos.map((video) => (
+                <a href={`/videos/${video.id}`} class="group">
+                  <div class="relative aspect-video rounded-lg overflow-hidden bg-base-300">
+                    {video.thumbnail ? (
+                      <img src={video.thumbnail} alt={video.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <div class="w-full h-full flex items-center justify-center">
+                        <svg class="w-12 h-12 text-base-content/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                      </div>
+                    )}
+                    {video.duration && (
+                      <div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
+                        {video.duration}
+                      </div>
+                    )}
+                  </div>
+                  <p class="mt-2 font-medium line-clamp-2 group-hover:text-primary transition-colors">{video.title}</p>
+                  <p class="text-xs text-base-content/60 mt-1">Watched {formatDate(video.viewedAt)}</p>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div class="text-center py-8">
+              <svg class="w-12 h-12 mx-auto text-base-content/20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              <p class="text-base-content/60 mb-3">No videos watched yet</p>
+              <a href="/videos" class="btn btn-primary btn-sm">Explore Videos</a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Lab Tools & Subscription -->
+    <div class="space-y-6">
+      <!-- Lab Tools Quick Access -->
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="card-title">🧪 Lab Tools</h3>
+            <a href="/lab" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          <div class="space-y-2">
+            {labTools.map((tool) => (
+              <a href={`/lab/${tool.slug}`} class="btn btn-outline btn-sm w-full justify-start">
+                <span class="mr-2">{tool.icon}</span>
+                {tool.name}
+              </a>
+            ))}
           </div>
         </div>
       </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div class="px-4 py-6 sm:px-0">
-        <!-- Welcome Section -->
-        <div class="bg-base-100 overflow-hidden shadow rounded-lg mb-6">
-          <div class="px-4 py-5 sm:p-6">
-            <h2 class="text-2xl font-bold text-base-content mb-2">
-              Welcome back, {profile?.name || profile?.username || user?.email}!
-            </h2>
-            <p class="text-base-content/70">
-              This is your personal dashboard where you can manage your content, subscriptions, and account settings.
-            </p>
+      <!-- Subscription Status -->
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h3 class="card-title mb-4">💎 Subscription</h3>
+          <div class="text-center">
+            <div class={`badge badge-lg ${viewer?.subscriptionTier === 'premium' ? 'badge-warning' : 'badge-ghost'} mb-3`}>
+              {viewer?.subscriptionTier === 'premium' ? 'Premium Member' : 'Free Member'}
+            </div>
+            {viewer?.subscriptionTier === 'premium' ? (
+              <div>
+                <p class="text-sm text-base-content/70 mb-4">You have access to all premium features!</p>
+                <a href="/profile" class="btn btn-sm btn-outline w-full">Manage Subscription</a>
+              </div>
+            ) : (
+              <div>
+                <p class="text-sm text-base-content/70 mb-3">Upgrade to unlock premium content and features</p>
+                <ul class="text-left text-sm space-y-2 mb-4">
+                  <li class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Premium videos
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Advanced search
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Priority support
+                  </li>
+                </ul>
+                <a href="/pricing" class="btn btn-primary btn-sm w-full">Upgrade Now</a>
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div class="bg-base-100 overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <div class="flex items-center">
-                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                  </svg>
-                </div>
-                <div class="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt class="text-sm font-medium text-base-content/60 truncate">Videos</dt>
-                    <dd class="text-lg font-medium text-base-content">0</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-base-100 overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <div class="flex items-center">
-                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
-                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                  </svg>
-                </div>
-                <div class="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt class="text-sm font-medium text-base-content/60 truncate">Blog Posts</dt>
-                    <dd class="text-lg font-medium text-base-content">0</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-base-100 overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <div class="flex items-center">
-                <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
-                  <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                  </svg>
-                </div>
-                <div class="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt class="text-sm font-medium text-base-content/60 truncate">Code Snippets</dt>
-                    <dd class="text-lg font-medium text-base-content">0</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-base-100 overflow-hidden shadow rounded-lg">
-          <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg font-medium text-base-content mb-4">Quick Actions</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <a href="/videos/new" class="btn btn-primary text-center">
-                Add Video
-              </a>
-              <a href="/blog/new" class="btn btn-primary text-center">
-                Write Blog Post
-              </a>
-              <a href="/snippets/new" class="btn btn-primary text-center">
-                Add Snippet
-              </a>
-              <a href="/profile" class="btn btn-secondary text-center">
-                Edit Profile
-              </a>
-            </div>
+      <!-- Quick Links -->
+      <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h3 class="card-title mb-4">🔗 Quick Links</h3>
+          <div class="space-y-2">
+            <a href="/blog" class="btn btn-ghost btn-sm w-full justify-start">
+              📝 Browse Blog
+            </a>
+            <a href="/forum/notifications" class="btn btn-ghost btn-sm w-full justify-start">
+              🔔 Notifications
+            </a>
+            <a href="/profile" class="btn btn-ghost btn-sm w-full justify-start">
+              ⚙️ Settings
+            </a>
           </div>
         </div>
       </div>
     </div>
-  </main>
-</Layout>
+  </div>
+</MemberLayout>
