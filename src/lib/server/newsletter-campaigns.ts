@@ -345,5 +345,163 @@ export async function getSubscriberIdByEmail(email: string): Promise<number | nu
   return subscriber?.id || null;
 }
 
+/**
+ * Get all scheduled campaigns that are due to be sent
+ */
+export async function getDueScheduledCampaigns(): Promise<NewsletterCampaign[]> {
+  const now = new Date();
+  const campaigns = await db
+    .select()
+    .from(newsletterCampaigns)
+    .where(sql`${newsletterCampaigns.status} = 'scheduled' AND ${newsletterCampaigns.scheduledAt} <= ${now}`);
+
+  return campaigns;
+}
+
+/**
+ * Process all scheduled campaigns that are due
+ * This function is idempotent - it will only send campaigns that haven't been sent yet
+ * Returns the number of campaigns processed and any errors
+ */
+export async function processScheduledCampaigns(): Promise<{
+  processed: number;
+  sent: number;
+  failed: number;
+  results: Array<{ campaignId: number; subject: string; success: boolean; recipientCount?: number; error?: string }>;
+}> {
+  const dueCampaigns = await getDueScheduledCampaigns();
+  const results: Array<{ campaignId: number; subject: string; success: boolean; recipientCount?: number; error?: string }> = [];
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const campaign of dueCampaigns) {
+    // Double-check status before sending (idempotency)
+    const currentCampaign = await getCampaign(campaign.id);
+    if (!currentCampaign || currentCampaign.status !== 'scheduled') {
+      continue; // Skip if status changed or campaign deleted
+    }
+
+    // Send the campaign
+    const result = await sendCampaign(campaign.id);
+
+    if (result.success) {
+      sent++;
+      results.push({
+        campaignId: campaign.id,
+        subject: campaign.subject,
+        success: true,
+        recipientCount: result.recipientCount,
+      });
+    } else {
+      failed++;
+      results.push({
+        campaignId: campaign.id,
+        subject: campaign.subject,
+        success: false,
+        error: result.error,
+      });
+    }
+  }
+
+  return {
+    processed: dueCampaigns.length,
+    sent,
+    failed,
+    results,
+  };
+}
+
+/**
+ * Schedule a campaign for future delivery
+ */
+export async function scheduleCampaign(
+  campaignId: number,
+  scheduledAt: Date
+): Promise<{ success: boolean; campaign?: NewsletterCampaign; error?: string }> {
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) {
+    return { success: false, error: 'Campaign not found' };
+  }
+
+  if (campaign.status === 'sent') {
+    return { success: false, error: 'Cannot schedule a campaign that has already been sent' };
+  }
+
+  if (campaign.status === 'sending') {
+    return { success: false, error: 'Campaign is currently being sent' };
+  }
+
+  // Validate scheduled time is in the future
+  if (scheduledAt <= new Date()) {
+    return { success: false, error: 'Scheduled time must be in the future' };
+  }
+
+  const updated = await updateCampaign(campaignId, {
+    status: 'scheduled',
+    scheduledAt,
+  });
+
+  return {
+    success: true,
+    campaign: updated || undefined,
+  };
+}
+
+/**
+ * Cancel a scheduled campaign
+ */
+export async function cancelScheduledCampaign(campaignId: number): Promise<{ success: boolean; campaign?: NewsletterCampaign; error?: string }> {
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) {
+    return { success: false, error: 'Campaign not found' };
+  }
+
+  if (campaign.status !== 'scheduled') {
+    return { success: false, error: 'Can only cancel scheduled campaigns' };
+  }
+
+  const updated = await updateCampaign(campaignId, {
+    status: 'draft',
+    scheduledAt: null,
+  });
+
+  return {
+    success: true,
+    campaign: updated || undefined,
+  };
+}
+
+/**
+ * Reschedule a campaign
+ */
+export async function rescheduleCampaign(
+  campaignId: number,
+  newScheduledAt: Date
+): Promise<{ success: boolean; campaign?: NewsletterCampaign; error?: string }> {
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) {
+    return { success: false, error: 'Campaign not found' };
+  }
+
+  if (campaign.status !== 'scheduled') {
+    return { success: false, error: 'Can only reschedule scheduled campaigns' };
+  }
+
+  // Validate new scheduled time is in the future
+  if (newScheduledAt <= new Date()) {
+    return { success: false, error: 'Scheduled time must be in the future' };
+  }
+
+  const updated = await updateCampaign(campaignId, {
+    scheduledAt: newScheduledAt,
+  });
+
+  return {
+    success: true,
+    campaign: updated || undefined,
+  };
+}
+
 // Import helper functions from newsletter.ts
 import { getActiveSubscribers, markEmailAsBounced, unsubscribeFromNewsletter, getSubscriberStats } from './newsletter';
