@@ -16,7 +16,7 @@ import Navbar from '../../components/Navbar.astro';
           Back to Lab
         </a>
         <h1 class="text-3xl font-bold">JSON Validator</h1>
-        <p class="text-base-content/70 mt-2">Validate, format, and debug JSON data</p>
+        <p class="text-base-content/70 mt-2">Validate, format, and explore JSON data</p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -27,59 +27,38 @@ import Navbar from '../../components/Navbar.astro';
               <div class="flex items-center justify-between mb-4">
                 <h2 class="card-title">JSON Input</h2>
                 <div class="flex gap-2">
-                  <button id="paste-btn" class="btn btn-sm btn-ghost">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    Paste
-                  </button>
-                  <button id="clear-btn" class="btn btn-sm btn-ghost">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Clear
-                  </button>
+                  <button id="clear-btn" class="btn btn-sm btn-ghost">Clear</button>
+                  <button id="sample-btn" class="btn btn-sm btn-ghost">Sample</button>
                 </div>
               </div>
               <textarea 
                 id="json-input"
                 class="textarea textarea-bordered font-mono text-sm h-96 w-full"
-                placeholder='{"example": "Paste your JSON here..."}'
+                placeholder='{"key": "value", "number": 42}'
               ></textarea>
-            </div>
-          </div>
-
-          <!-- Quick Examples -->
-          <div class="card bg-base-100 shadow-lg">
-            <div class="card-body">
-              <h2 class="card-title">Quick Examples</h2>
-              <div class="flex flex-wrap gap-2">
-                <button class="btn btn-sm btn-ghost example-btn" data-example='{"name": "John", "age": 30, "active": true}'>Simple Object</button>
-                <button class="btn btn-sm btn-ghost example-btn" data-example='[1, 2, 3, "four", true]'>Array</button>
-                <button class="btn btn-sm btn-ghost example-btn" data-example='{"users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]}'>Nested</button>
-                <button class="btn btn-sm btn-ghost example-btn" data-example='{"invalid": "missing quote}'>Invalid JSON</button>
+              <div class="flex gap-2 mt-4">
+                <button id="validate-btn" class="btn btn-primary flex-1">Validate</button>
+                <button id="format-btn" class="btn btn-secondary flex-1">Format</button>
+                <button id="minify-btn" class="btn btn-ghost flex-1">Minify</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Results Section -->
+        <!-- Output Section -->
         <div class="space-y-6">
           <!-- Status -->
           <div class="card bg-base-100 shadow-lg">
             <div class="card-body">
               <div class="flex items-center justify-between">
-                <h2 class="card-title">Validation Status</h2>
+                <h2 class="card-title">Status</h2>
                 <div id="status-badge" class="badge badge-ghost">Waiting for input</div>
               </div>
               <div id="error-message" class="alert alert-error hidden">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                <div>
-                  <div id="error-title" class="font-bold"></div>
-                  <div id="error-detail" class="text-sm"></div>
-                </div>
+                <span id="error-text"></span>
               </div>
               <div id="success-message" class="alert alert-success hidden">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,44 +74,39 @@ import Navbar from '../../components/Navbar.astro';
             <div class="card-body">
               <div class="flex items-center justify-between mb-4">
                 <h2 class="card-title">Formatted Output</h2>
-                <div class="flex gap-2">
-                  <select id="indent-select" class="select select-sm select-bordered">
-                    <option value="2">2 spaces</option>
-                    <option value="4">4 spaces</option>
-                    <option value="tab">Tabs</option>
-                  </select>
-                  <button id="copy-btn" class="btn btn-sm btn-primary" disabled>
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                    </svg>
-                    Copy
-                  </button>
-                </div>
+                <button id="copy-btn" class="btn btn-sm btn-ghost" disabled>
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy
+                </button>
               </div>
-              <pre id="formatted-output" class="bg-base-200 p-4 rounded-lg overflow-auto max-h-80 font-mono text-sm"><span class="text-base-content/50">Formatted JSON will appear here...</span></pre>
+              <pre id="json-output" class="bg-base-200 p-4 rounded-lg overflow-auto max-h-80 text-sm font-mono">
+                <span class="text-base-content/50">Output will appear here</span>
+              </pre>
             </div>
           </div>
 
           <!-- JSON Stats -->
           <div class="card bg-base-100 shadow-lg">
             <div class="card-body">
-              <h2 class="card-title">JSON Statistics</h2>
-              <div id="json-stats" class="grid grid-cols-2 gap-4">
-                <div class="stat bg-base-200 rounded-lg p-3">
-                  <div class="stat-title text-xs">Type</div>
-                  <div id="stat-type" class="stat-value text-lg">-</div>
+              <h2 class="card-title">Statistics</h2>
+              <div id="json-stats" class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div class="text-base-content/70">Type</div>
+                  <div id="stat-type" class="font-semibold">-</div>
                 </div>
-                <div class="stat bg-base-200 rounded-lg p-3">
-                  <div class="stat-title text-xs">Size</div>
-                  <div id="stat-size" class="stat-value text-lg">-</div>
+                <div>
+                  <div class="text-base-content/70">Size</div>
+                  <div id="stat-size" class="font-semibold">-</div>
                 </div>
-                <div class="stat bg-base-200 rounded-lg p-3">
-                  <div class="stat-title text-xs">Keys</div>
-                  <div id="stat-keys" class="stat-value text-lg">-</div>
+                <div>
+                  <div class="text-base-content/70">Keys</div>
+                  <div id="stat-keys" class="font-semibold">-</div>
                 </div>
-                <div class="stat bg-base-200 rounded-lg p-3">
-                  <div class="stat-title text-xs">Depth</div>
-                  <div id="stat-depth" class="stat-value text-lg">-</div>
+                <div>
+                  <div class="text-base-content/70">Depth</div>
+                  <div id="stat-depth" class="font-semibold">-</div>
                 </div>
               </div>
             </div>
@@ -144,16 +118,18 @@ import Navbar from '../../components/Navbar.astro';
 
   <script>
     const jsonInput = document.getElementById('json-input') as HTMLTextAreaElement;
+    const jsonOutput = document.getElementById('json-output') as HTMLPreElement;
     const statusBadge = document.getElementById('status-badge') as HTMLDivElement;
     const errorMessage = document.getElementById('error-message') as HTMLDivElement;
-    const errorTitle = document.getElementById('error-title') as HTMLDivElement;
-    const errorDetail = document.getElementById('error-detail') as HTMLDivElement;
+    const errorText = document.getElementById('error-text') as HTMLSpanElement;
     const successMessage = document.getElementById('success-message') as HTMLDivElement;
-    const formattedOutput = document.getElementById('formatted-output') as HTMLPreElement;
-    const indentSelect = document.getElementById('indent-select') as HTMLSelectElement;
-    const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement;
-    const pasteBtn = document.getElementById('paste-btn') as HTMLButtonElement;
+    const validateBtn = document.getElementById('validate-btn') as HTMLButtonElement;
+    const formatBtn = document.getElementById('format-btn') as HTMLButtonElement;
+    const minifyBtn = document.getElementById('minify-btn') as HTMLButtonElement;
     const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
+    const sampleBtn = document.getElementById('sample-btn') as HTMLButtonElement;
+    const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement;
+
     const statType = document.getElementById('stat-type') as HTMLDivElement;
     const statSize = document.getElementById('stat-size') as HTMLDivElement;
     const statKeys = document.getElementById('stat-keys') as HTMLDivElement;
@@ -161,15 +137,33 @@ import Navbar from '../../components/Navbar.astro';
 
     let parsedJson: unknown = null;
 
-    function getIndent(): string | number {
-      const value = indentSelect.value;
-      return value === 'tab' ? '\t' : parseInt(value);
+    function showError(message: string): void {
+      errorMessage.classList.remove('hidden');
+      successMessage.classList.add('hidden');
+      errorText.textContent = message;
+      statusBadge.className = 'badge badge-error';
+      statusBadge.textContent = 'Invalid';
+      copyBtn.disabled = true;
     }
 
-    function formatBytes(bytes: number): string {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    function showSuccess(): void {
+      errorMessage.classList.add('hidden');
+      successMessage.classList.remove('hidden');
+      statusBadge.className = 'badge badge-success';
+      statusBadge.textContent = 'Valid';
+      copyBtn.disabled = false;
+    }
+
+    function resetState(): void {
+      errorMessage.classList.add('hidden');
+      successMessage.classList.add('hidden');
+      statusBadge.className = 'badge badge-ghost';
+      statusBadge.textContent = 'Waiting for input';
+      copyBtn.disabled = true;
+      statType.textContent = '-';
+      statSize.textContent = '-';
+      statKeys.textContent = '-';
+      statDepth.textContent = '-';
     }
 
     function getJsonType(value: unknown): string {
@@ -178,149 +172,181 @@ import Navbar from '../../components/Navbar.astro';
       return typeof value;
     }
 
-    function countKeys(obj: unknown, depth: number = 0): { keys: number; maxDepth: number } {
-      if (typeof obj !== 'object' || obj === null) {
-        return { keys: 0, maxDepth: depth };
-      }
-
-      let keys = 0;
-      let maxDepth = depth;
-
+    function countKeys(obj: unknown): number {
+      if (typeof obj !== 'object' || obj === null) return 0;
       if (Array.isArray(obj)) {
-        for (const item of obj) {
-          const result = countKeys(item, depth + 1);
-          keys += result.keys;
-          maxDepth = Math.max(maxDepth, result.maxDepth);
-        }
-      } else {
-        keys = Object.keys(obj).length;
-        for (const value of Object.values(obj)) {
-          const result = countKeys(value, depth + 1);
-          keys += result.keys;
-          maxDepth = Math.max(maxDepth, result.maxDepth);
-        }
+        return obj.reduce((sum, item) => sum + countKeys(item), 0);
       }
-
-      return { keys, maxDepth };
+      let count = Object.keys(obj).length;
+      for (const value of Object.values(obj)) {
+        count += countKeys(value);
+      }
+      return count;
     }
 
-    function validateJson() {
-      const input = jsonInput.value.trim();
+    function getMaxDepth(obj: unknown, currentDepth = 0): number {
+      if (typeof obj !== 'object' || obj === null) return currentDepth;
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return currentDepth + 1;
+        return Math.max(...obj.map(item => getMaxDepth(item, currentDepth + 1)));
+      }
+      const keys = Object.keys(obj);
+      if (keys.length === 0) return currentDepth + 1;
+      return Math.max(...Object.values(obj).map(value => getMaxDepth(value, currentDepth + 1)));
+    }
 
+    function updateStats(value: unknown): void {
+      statType.textContent = getJsonType(value);
+      
+      const inputSize = new Blob([jsonInput.value]).size;
+      if (inputSize < 1024) {
+        statSize.textContent = `${inputSize} B`;
+      } else if (inputSize < 1024 * 1024) {
+        statSize.textContent = `${(inputSize / 1024).toFixed(2)} KB`;
+      } else {
+        statSize.textContent = `${(inputSize / (1024 * 1024)).toFixed(2)} MB`;
+      }
+
+      statKeys.textContent = countKeys(value).toString();
+      statDepth.textContent = getMaxDepth(value).toString();
+    }
+
+    function validate(): boolean {
+      const input = jsonInput.value.trim();
+      
       if (!input) {
-        statusBadge.className = 'badge badge-ghost';
-        statusBadge.textContent = 'Waiting for input';
-        errorMessage.classList.add('hidden');
-        successMessage.classList.add('hidden');
-        formattedOutput.innerHTML = '<span class="text-base-content/50">Formatted JSON will appear here...</span>';
-        copyBtn.disabled = true;
-        statType.textContent = '-';
-        statSize.textContent = '-';
-        statKeys.textContent = '-';
-        statDepth.textContent = '-';
-        parsedJson = null;
-        return;
+        resetState();
+        jsonOutput.innerHTML = '<span class="text-base-content/50">Output will appear here</span>';
+        return false;
       }
 
       try {
         parsedJson = JSON.parse(input);
-        
-        statusBadge.className = 'badge badge-success';
-        statusBadge.textContent = 'Valid';
-        errorMessage.classList.add('hidden');
-        successMessage.classList.remove('hidden');
-
-        // Format output
-        const indent = getIndent();
-        const formatted = JSON.stringify(parsedJson, null, indent);
-        formattedOutput.textContent = formatted;
-        copyBtn.disabled = false;
-
-        // Calculate stats
-        const size = new Blob([input]).size;
-        const { keys, maxDepth } = countKeys(parsedJson);
-
-        statType.textContent = getJsonType(parsedJson);
-        statSize.textContent = formatBytes(size);
-        statKeys.textContent = keys.toString();
-        statDepth.textContent = maxDepth.toString();
-
+        showSuccess();
+        updateStats(parsedJson);
+        return true;
       } catch (e) {
         const error = e as SyntaxError;
-        parsedJson = null;
-
-        statusBadge.className = 'badge badge-error';
-        statusBadge.textContent = 'Invalid';
-        successMessage.classList.add('hidden');
-        errorMessage.classList.remove('hidden');
-
-        // Parse error message for position
-        const match = error.message.match(/position (\d+)/i);
+        // Try to extract line/column from error message
+        const match = error.message.match(/position\s+(\d+)/i);
         if (match) {
-          const pos = parseInt(match[1]);
-          errorTitle.textContent = 'Parse Error';
-          errorDetail.textContent = `${error.message}\nNear: "...${input.substring(Math.max(0, pos - 20), pos)}►${input.substring(pos, pos + 20)}..."`;
+          const position = parseInt(match[1]);
+          const lines = input.substring(0, position).split('\n');
+          const line = lines.length;
+          const column = lines[lines.length - 1].length + 1;
+          showError(`${error.message} (line ${line}, column ${column})`);
         } else {
-          errorTitle.textContent = 'Parse Error';
-          errorDetail.textContent = error.message;
+          showError(error.message);
         }
-
-        formattedOutput.innerHTML = '<span class="text-base-content/50">Fix JSON errors to see formatted output</span>';
-        copyBtn.disabled = true;
-
-        statType.textContent = '-';
-        statSize.textContent = formatBytes(new Blob([input]).size);
-        statKeys.textContent = '-';
-        statDepth.textContent = '-';
+        parsedJson = null;
+        return false;
       }
     }
 
+    function format(): void {
+      if (!validate()) return;
+      
+      const formatted = JSON.stringify(parsedJson, null, 2);
+      jsonOutput.innerHTML = syntaxHighlight(formatted);
+    }
+
+    function minify(): void {
+      if (!validate()) return;
+      
+      const minified = JSON.stringify(parsedJson);
+      jsonInput.value = minified;
+      jsonOutput.textContent = minified;
+    }
+
+    function syntaxHighlight(json: string): string {
+      // Escape HTML first
+      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      // Apply syntax highlighting
+      return json.replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+        (match) => {
+          let cls = 'text-orange-500'; // number
+          if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+              cls = 'text-primary'; // key
+            } else {
+              cls = 'text-success'; // string
+            }
+          } else if (/true|false/.test(match)) {
+            cls = 'text-info'; // boolean
+          } else if (/null/.test(match)) {
+            cls = 'text-base-content/50'; // null
+          }
+          return `<span class="${cls}">${match}</span>`;
+        }
+      );
+    }
+
     // Event listeners
-    jsonInput.addEventListener('input', validateJson);
-    indentSelect.addEventListener('change', () => {
-      if (parsedJson !== null) {
-        const indent = getIndent();
-        formattedOutput.textContent = JSON.stringify(parsedJson, null, indent);
-      }
-    });
-
-    copyBtn.addEventListener('click', async () => {
-      if (formattedOutput.textContent) {
-        await navigator.clipboard.writeText(formattedOutput.textContent);
-        copyBtn.innerHTML = `
-          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          Copied!
-        `;
-        setTimeout(() => {
-          copyBtn.innerHTML = `
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
-            Copy
-          `;
-        }, 1500);
-      }
-    });
-
-    pasteBtn.addEventListener('click', async () => {
-      const text = await navigator.clipboard.readText();
-      jsonInput.value = text;
-      validateJson();
-    });
+    validateBtn.addEventListener('click', validate);
+    formatBtn.addEventListener('click', format);
+    minifyBtn.addEventListener('click', minify);
 
     clearBtn.addEventListener('click', () => {
       jsonInput.value = '';
-      validateJson();
+      jsonOutput.innerHTML = '<span class="text-base-content/50">Output will appear here</span>';
+      resetState();
+      parsedJson = null;
     });
 
-    // Example buttons
-    document.querySelectorAll('.example-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        jsonInput.value = (btn as HTMLElement).dataset.example!;
-        validateJson();
-      });
+    sampleBtn.addEventListener('click', () => {
+      const sample = {
+        name: "John Doe",
+        age: 30,
+        email: "john@example.com",
+        isActive: true,
+        roles: ["admin", "user"],
+        preferences: {
+          theme: "dark",
+          notifications: {
+            email: true,
+            push: false
+          }
+        },
+        lastLogin: null
+      };
+      jsonInput.value = JSON.stringify(sample, null, 2);
+      format();
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      if (!parsedJson) return;
+      const formatted = JSON.stringify(parsedJson, null, 2);
+      await navigator.clipboard.writeText(formatted);
+      copyBtn.innerHTML = `
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Copied!
+      `;
+      setTimeout(() => {
+        copyBtn.innerHTML = `
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          Copy
+        `;
+      }, 1500);
+    });
+
+    // Auto-validate on input with debounce
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    jsonInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (jsonInput.value.trim()) {
+          validate();
+        } else {
+          resetState();
+          jsonOutput.innerHTML = '<span class="text-base-content/50">Output will appear here</span>';
+        }
+      }, 300);
     });
   </script>
 </Layout>

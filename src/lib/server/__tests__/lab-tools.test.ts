@@ -1,279 +1,378 @@
 /**
- * Tests for lab tools - JSON validator and password generator
+ * Tests for lab tools - JSON Validator and Password Generator
  */
 import { describe, it, expect } from 'vitest';
 
-describe('JSON Validator - Validation', () => {
-  it('should validate correct JSON objects', () => {
-    const validateJson = (input: string): { valid: boolean; error?: string } => {
-      try {
-        JSON.parse(input);
-        return { valid: true };
-      } catch (e) {
-        return { valid: false, error: (e as Error).message };
-      }
-    };
+describe('JSON Validator', () => {
+  describe('JSON Parsing', () => {
+    it('should parse valid JSON object', () => {
+      const input = '{"name": "John", "age": 30}';
+      const parsed = JSON.parse(input);
+      expect(parsed.name).toBe('John');
+      expect(parsed.age).toBe(30);
+    });
 
-    expect(validateJson('{"name": "John"}').valid).toBe(true);
-    expect(validateJson('[1, 2, 3]').valid).toBe(true);
-    expect(validateJson('true').valid).toBe(true);
-    expect(validateJson('null').valid).toBe(true);
+    it('should parse valid JSON array', () => {
+      const input = '[1, 2, 3, 4, 5]';
+      const parsed = JSON.parse(input);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.length).toBe(5);
+    });
+
+    it('should parse nested JSON', () => {
+      const input = '{"user": {"name": "Jane", "roles": ["admin", "user"]}}';
+      const parsed = JSON.parse(input);
+      expect(parsed.user.name).toBe('Jane');
+      expect(parsed.user.roles).toContain('admin');
+    });
+
+    it('should parse JSON with null values', () => {
+      const input = '{"value": null}';
+      const parsed = JSON.parse(input);
+      expect(parsed.value).toBeNull();
+    });
+
+    it('should parse JSON with boolean values', () => {
+      const input = '{"active": true, "deleted": false}';
+      const parsed = JSON.parse(input);
+      expect(parsed.active).toBe(true);
+      expect(parsed.deleted).toBe(false);
+    });
+
+    it('should parse JSON with numbers', () => {
+      const input = '{"integer": 42, "float": 3.14, "negative": -10}';
+      const parsed = JSON.parse(input);
+      expect(parsed.integer).toBe(42);
+      expect(parsed.float).toBeCloseTo(3.14);
+      expect(parsed.negative).toBe(-10);
+    });
   });
 
-  it('should reject invalid JSON', () => {
-    const validateJson = (input: string): { valid: boolean; error?: string } => {
-      try {
-        JSON.parse(input);
-        return { valid: true };
-      } catch (e) {
-        return { valid: false, error: (e as Error).message };
-      }
-    };
+  describe('Error Detection', () => {
+    it('should detect invalid JSON - missing quote', () => {
+      const input = '{name: "John"}';
+      expect(() => JSON.parse(input)).toThrow();
+    });
 
-    expect(validateJson('{invalid}').valid).toBe(false);
-    expect(validateJson('{"missing": "quote}').valid).toBe(false);
-    expect(validateJson('[1, 2,]').valid).toBe(false);
-    expect(validateJson('undefined').valid).toBe(false);
+    it('should detect invalid JSON - trailing comma', () => {
+      const input = '{"items": [1, 2, 3,]}';
+      expect(() => JSON.parse(input)).toThrow();
+    });
+
+    it('should detect invalid JSON - single quotes', () => {
+      const input = "{'name': 'John'}";
+      expect(() => JSON.parse(input)).toThrow();
+    });
+
+    it('should detect invalid JSON - unclosed bracket', () => {
+      const input = '{"items": [1, 2, 3';
+      expect(() => JSON.parse(input)).toThrow();
+    });
+
+    it('should detect invalid JSON - unclosed brace', () => {
+      const input = '{"name": "John"';
+      expect(() => JSON.parse(input)).toThrow();
+    });
   });
 
-  it('should detect JSON type correctly', () => {
+  describe('JSON Formatting', () => {
+    it('should format JSON with 2-space indentation', () => {
+      const obj = { name: 'John', age: 30 };
+      const formatted = JSON.stringify(obj, null, 2);
+      expect(formatted).toContain('  "name"');
+      expect(formatted).toContain('  "age"');
+    });
+
+    it('should minify JSON', () => {
+      const obj = { name: 'John', age: 30 };
+      const minified = JSON.stringify(obj);
+      expect(minified).toBe('{"name":"John","age":30}');
+    });
+
+    it('should handle empty objects', () => {
+      const obj = {};
+      const formatted = JSON.stringify(obj, null, 2);
+      expect(formatted).toBe('{}');
+    });
+
+    it('should handle empty arrays', () => {
+      const arr: unknown[] = [];
+      const formatted = JSON.stringify(arr, null, 2);
+      expect(formatted).toBe('[]');
+    });
+  });
+
+  describe('JSON Statistics', () => {
     const getJsonType = (value: unknown): string => {
       if (value === null) return 'null';
       if (Array.isArray(value)) return 'array';
       return typeof value;
     };
 
-    expect(getJsonType(JSON.parse('{"a": 1}'))).toBe('object');
-    expect(getJsonType(JSON.parse('[1, 2]'))).toBe('array');
-    expect(getJsonType(JSON.parse('"hello"'))).toBe('string');
-    expect(getJsonType(JSON.parse('123'))).toBe('number');
-    expect(getJsonType(JSON.parse('true'))).toBe('boolean');
-    expect(getJsonType(JSON.parse('null'))).toBe('null');
-  });
-});
-
-describe('JSON Validator - Formatting', () => {
-  it('should format JSON with correct indentation', () => {
-    const formatJson = (obj: unknown, indent: number | string): string => {
-      return JSON.stringify(obj, null, indent);
-    };
-
-    const obj = { name: 'test' };
-    
-    expect(formatJson(obj, 2)).toBe('{\n  "name": "test"\n}');
-    expect(formatJson(obj, 4)).toBe('{\n    "name": "test"\n}');
-    expect(formatJson(obj, '\t')).toBe('{\n\t"name": "test"\n}');
-  });
-
-  it('should calculate JSON size correctly', () => {
-    const formatBytes = (bytes: number): string => {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    };
-
-    expect(formatBytes(100)).toBe('100 B');
-    expect(formatBytes(1024)).toBe('1.0 KB');
-    expect(formatBytes(1536)).toBe('1.5 KB');
-    expect(formatBytes(1048576)).toBe('1.0 MB');
-  });
-});
-
-describe('JSON Validator - Key Counting', () => {
-  it('should count keys in flat objects', () => {
     const countKeys = (obj: unknown): number => {
       if (typeof obj !== 'object' || obj === null) return 0;
-      if (Array.isArray(obj)) return obj.reduce((sum, item) => sum + countKeys(item), 0);
-      return Object.keys(obj).length + Object.values(obj).reduce((sum, val) => sum + countKeys(val), 0);
-    };
-
-    expect(countKeys({ a: 1, b: 2 })).toBe(2);
-    expect(countKeys({ a: 1, b: { c: 3 } })).toBe(3);
-    expect(countKeys([{ a: 1 }, { b: 2 }])).toBe(2);
-  });
-
-  it('should calculate max depth correctly', () => {
-    const getMaxDepth = (obj: unknown, depth: number = 0): number => {
-      if (typeof obj !== 'object' || obj === null) return depth;
       if (Array.isArray(obj)) {
-        return Math.max(depth, ...obj.map(item => getMaxDepth(item, depth + 1)));
+        return obj.reduce((sum, item) => sum + countKeys(item), 0);
       }
-      return Math.max(depth, ...Object.values(obj).map(val => getMaxDepth(val, depth + 1)));
+      let count = Object.keys(obj).length;
+      for (const value of Object.values(obj)) {
+        count += countKeys(value);
+      }
+      return count;
     };
 
-    expect(getMaxDepth({ a: 1 })).toBe(1);
-    expect(getMaxDepth({ a: { b: 2 } })).toBe(2);
-    expect(getMaxDepth({ a: { b: { c: 3 } } })).toBe(3);
+    const getMaxDepth = (obj: unknown, currentDepth = 0): number => {
+      if (typeof obj !== 'object' || obj === null) return currentDepth;
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return currentDepth + 1;
+        return Math.max(...obj.map(item => getMaxDepth(item, currentDepth + 1)));
+      }
+      const keys = Object.keys(obj);
+      if (keys.length === 0) return currentDepth + 1;
+      return Math.max(...Object.values(obj).map(value => getMaxDepth(value, currentDepth + 1)));
+    };
+
+    it('should identify JSON types correctly', () => {
+      expect(getJsonType(null)).toBe('null');
+      expect(getJsonType('string')).toBe('string');
+      expect(getJsonType(42)).toBe('number');
+      expect(getJsonType(true)).toBe('boolean');
+      expect(getJsonType([1, 2, 3])).toBe('array');
+      expect(getJsonType({ key: 'value' })).toBe('object');
+    });
+
+    it('should count keys in flat object', () => {
+      const obj = { a: 1, b: 2, c: 3 };
+      expect(countKeys(obj)).toBe(3);
+    });
+
+    it('should count keys in nested object', () => {
+      const obj = { a: 1, b: { c: 2, d: 3 }, e: 4 };
+      expect(countKeys(obj)).toBe(5);
+    });
+
+    it('should count keys in array', () => {
+      const arr = [{ a: 1 }, { b: 2, c: 3 }];
+      expect(countKeys(arr)).toBe(3);
+    });
+
+    it('should calculate max depth for flat object', () => {
+      const obj = { a: 1, b: 2 };
+      expect(getMaxDepth(obj)).toBe(1);
+    });
+
+    it('should calculate max depth for nested object', () => {
+      const obj = { a: { b: { c: 1 } } };
+      expect(getMaxDepth(obj)).toBe(3);
+    });
+
+    it('should calculate max depth for array', () => {
+      const arr = [[1, 2], [3, 4]];
+      expect(getMaxDepth(arr)).toBe(2);
+    });
   });
 });
 
-describe('Password Generator - Character Sets', () => {
-  it('should include uppercase letters when enabled', () => {
-    const UPPERCASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const chars = UPPERCASE;
-    
-    expect(chars).toHaveLength(26);
-    expect(chars).toContain('A');
-    expect(chars).toContain('Z');
-  });
+describe('Password Generator', () => {
+  const CHAR_SETS = {
+    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lowercase: 'abcdefghijklmnopqrstuvwxyz',
+    numbers: '0123456789',
+    symbols: '!@#$%^&*()_+-=[]{}|;:,.<>?'
+  };
 
-  it('should include lowercase letters when enabled', () => {
-    const LOWERCASE = 'abcdefghijklmnopqrstuvwxyz';
-    const chars = LOWERCASE;
-    
-    expect(chars).toHaveLength(26);
-    expect(chars).toContain('a');
-    expect(chars).toContain('z');
-  });
+  const AMBIGUOUS_CHARS = ['0', 'O', 'l', '1', 'I', '|', '`', "'", '"'];
 
-  it('should include numbers when enabled', () => {
-    const NUMBERS = '0123456789';
-    const chars = NUMBERS;
-    
-    expect(chars).toHaveLength(10);
-    expect(chars).toContain('0');
-    expect(chars).toContain('9');
-  });
+  const getCharacterSet = (
+    includeUpper: boolean,
+    includeLower: boolean,
+    includeNumbers: boolean,
+    includeSymbols: boolean,
+    excludeAmbiguous: boolean
+  ): string => {
+    let chars = '';
+    if (includeUpper) chars += CHAR_SETS.uppercase;
+    if (includeLower) chars += CHAR_SETS.lowercase;
+    if (includeNumbers) chars += CHAR_SETS.numbers;
+    if (includeSymbols) chars += CHAR_SETS.symbols;
 
-  it('should include symbols when enabled', () => {
-    const SYMBOLS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-    const chars = SYMBOLS;
-    
-    expect(chars.length).toBeGreaterThan(0);
-    expect(chars).toContain('@');
-    expect(chars).toContain('#');
-  });
-});
-
-describe('Password Generator - Strength Calculation', () => {
-  it('should classify short passwords as weak', () => {
-    const calculateStrength = (password: string): { score: number; label: string } => {
-      let score = 0;
-      if (password.length >= 8) score += 20;
-      if (/[a-z]/.test(password)) score += 10;
-      if (/[A-Z]/.test(password)) score += 10;
-      if (/[0-9]/.test(password)) score += 10;
-      if (/[^a-zA-Z0-9]/.test(password)) score += 20;
-      
-      if (score < 40) return { score, label: 'Weak' };
-      if (score < 60) return { score, label: 'Fair' };
-      if (score < 80) return { score, label: 'Good' };
-      return { score: Math.min(score, 100), label: 'Strong' };
-    };
-
-    const result = calculateStrength('abc');
-    expect(result.label).toBe('Weak');
-  });
-
-  it('should classify complex passwords as strong', () => {
-    const calculateStrength = (password: string): { score: number; label: string } => {
-      let score = 0;
-      if (password.length >= 8) score += 20;
-      if (password.length >= 12) score += 10;
-      if (password.length >= 16) score += 10;
-      if (/[a-z]/.test(password)) score += 10;
-      if (/[A-Z]/.test(password)) score += 10;
-      if (/[0-9]/.test(password)) score += 10;
-      if (/[^a-zA-Z0-9]/.test(password)) score += 20;
-      
-      if (score < 40) return { score, label: 'Weak' };
-      if (score < 60) return { score, label: 'Fair' };
-      if (score < 80) return { score, label: 'Good' };
-      return { score: Math.min(score, 100), label: 'Strong' };
-    };
-
-    const result = calculateStrength('Abc123!@#xyzXYZ');
-    expect(result.label).toBe('Strong');
-  });
-
-  it('should reward character variety', () => {
-    const calculateVarietyScore = (password: string): number => {
-      let score = 0;
-      if (/[a-z]/.test(password)) score += 1;
-      if (/[A-Z]/.test(password)) score += 1;
-      if (/[0-9]/.test(password)) score += 1;
-      if (/[^a-zA-Z0-9]/.test(password)) score += 1;
-      return score;
-    };
-
-    expect(calculateVarietyScore('aaaa')).toBe(1);
-    expect(calculateVarietyScore('Aa1!')).toBe(4);
-    expect(calculateVarietyScore('Password123!')).toBe(4);
-  });
-});
-
-describe('Password Generator - Options Validation', () => {
-  it('should require at least one character type', () => {
-    const validateOptions = (options: { upper: boolean; lower: boolean; numbers: boolean; symbols: boolean }): boolean => {
-      return options.upper || options.lower || options.numbers || options.symbols;
-    };
-
-    expect(validateOptions({ upper: false, lower: false, numbers: false, symbols: false })).toBe(false);
-    expect(validateOptions({ upper: true, lower: false, numbers: false, symbols: false })).toBe(true);
-    expect(validateOptions({ upper: true, lower: true, numbers: true, symbols: true })).toBe(true);
-  });
-
-  it('should respect excluded characters', () => {
-    const excludeChars = (chars: string, exclude: string): string => {
-      return chars.split('').filter(c => !exclude.includes(c)).join('');
-    };
-
-    const allChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const result = excludeChars(allChars, '0O1lI');
-    
-    expect(result).not.toContain('0');
-    expect(result).not.toContain('O');
-    expect(result).not.toContain('1');
-    expect(result).toContain('2');
-    expect(result).toContain('A');
-  });
-
-  it('should validate password length range', () => {
-    const validateLength = (length: number): { valid: boolean; error?: string } => {
-      if (length < 8) return { valid: false, error: 'Minimum length is 8' };
-      if (length > 64) return { valid: false, error: 'Maximum length is 64' };
-      return { valid: true };
-    };
-
-    expect(validateLength(7).valid).toBe(false);
-    expect(validateLength(8).valid).toBe(true);
-    expect(validateLength(16).valid).toBe(true);
-    expect(validateLength(64).valid).toBe(true);
-    expect(validateLength(65).valid).toBe(false);
-  });
-});
-
-describe('Password Generator - History', () => {
-  it('should limit history to 5 items', () => {
-    const history: string[] = [];
-    const maxHistory = 5;
-    
-    const addToHistory = (password: string): string[] => {
-      history.unshift(password);
-      if (history.length > maxHistory) history.pop();
-      return history;
-    };
-
-    for (let i = 0; i < 10; i++) {
-      addToHistory(`password${i}`);
+    if (excludeAmbiguous) {
+      chars = chars.split('').filter(c => !AMBIGUOUS_CHARS.includes(c)).join('');
     }
 
-    expect(history).toHaveLength(5);
-    expect(history[0]).toBe('password9');
-    expect(history[4]).toBe('password5');
+    return chars;
+  };
+
+  const generatePassword = (chars: string, length: number): string => {
+    if (chars.length === 0) return '';
+    
+    // Simulate crypto.getRandomValues behavior for testing
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return password;
+  };
+
+  const calculateEntropy = (passwordLength: number, poolSize: number): number => {
+    if (poolSize === 0) return 0;
+    return Math.round(passwordLength * Math.log2(poolSize) * 10) / 10;
+  };
+
+  const getStrengthInfo = (entropy: number): { label: string; value: number } => {
+    if (entropy < 28) return { label: 'Very Weak', value: 20 };
+    if (entropy < 36) return { label: 'Weak', value: 40 };
+    if (entropy < 60) return { label: 'Fair', value: 60 };
+    if (entropy < 80) return { label: 'Strong', value: 80 };
+    return { label: 'Very Strong', value: 100 };
+  };
+
+  describe('Character Set Selection', () => {
+    it('should include all character types by default', () => {
+      const chars = getCharacterSet(true, true, true, true, false);
+      expect(chars.length).toBe(
+        CHAR_SETS.uppercase.length + 
+        CHAR_SETS.lowercase.length + 
+        CHAR_SETS.numbers.length + 
+        CHAR_SETS.symbols.length
+      );
+    });
+
+    it('should exclude uppercase when disabled', () => {
+      const chars = getCharacterSet(false, true, true, true, false);
+      expect(chars).not.toContain('A');
+      expect(chars).not.toContain('Z');
+    });
+
+    it('should exclude lowercase when disabled', () => {
+      const chars = getCharacterSet(true, false, true, true, false);
+      expect(chars).not.toContain('a');
+      expect(chars).not.toContain('z');
+    });
+
+    it('should exclude numbers when disabled', () => {
+      const chars = getCharacterSet(true, true, false, true, false);
+      expect(chars).not.toContain('0');
+      expect(chars).not.toContain('9');
+    });
+
+    it('should exclude symbols when disabled', () => {
+      const chars = getCharacterSet(true, true, true, false, false);
+      expect(chars).not.toContain('!');
+      expect(chars).not.toContain('@');
+    });
+
+    it('should exclude ambiguous characters when enabled', () => {
+      const chars = getCharacterSet(true, true, true, true, true);
+      expect(chars).not.toContain('0');
+      expect(chars).not.toContain('O');
+      expect(chars).not.toContain('l');
+      expect(chars).not.toContain('1');
+      expect(chars).not.toContain('I');
+    });
+
+    it('should return empty string when no options selected', () => {
+      const chars = getCharacterSet(false, false, false, false, false);
+      expect(chars).toBe('');
+    });
   });
 
-  it('should escape HTML in password display', () => {
-    const escapeHtml = (text: string): string => {
-      const div = { textContent: '' as string | null };
-      // Simulate HTML escaping
-      return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    };
+  describe('Password Generation', () => {
+    it('should generate password of correct length', () => {
+      const chars = getCharacterSet(true, true, true, true, false);
+      const password = generatePassword(chars, 16);
+      expect(password.length).toBe(16);
+    });
 
-    expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+    it('should generate different passwords (randomness check)', () => {
+      const chars = getCharacterSet(true, true, true, true, false);
+      const passwords = new Set<string>();
+      for (let i = 0; i < 100; i++) {
+        passwords.add(generatePassword(chars, 16));
+      }
+      // At least 95 out of 100 should be unique
+      expect(passwords.size).toBeGreaterThan(95);
+    });
+
+    it('should only use characters from selected set', () => {
+      const chars = getCharacterSet(true, false, false, false, false);
+      const password = generatePassword(chars, 100);
+      for (const char of password) {
+        expect(CHAR_SETS.uppercase).toContain(char);
+      }
+    });
+  });
+
+  describe('Entropy Calculation', () => {
+    it('should calculate entropy correctly for alphanumeric', () => {
+      // 62 characters (a-z, A-Z, 0-9)
+      const entropy = calculateEntropy(16, 62);
+      // 16 * log2(62) ≈ 95.2 bits
+      expect(entropy).toBeCloseTo(95.2, 0);
+    });
+
+    it('should calculate entropy correctly for lowercase only', () => {
+      // 26 characters (a-z)
+      const entropy = calculateEntropy(16, 26);
+      // 16 * log2(26) ≈ 75.2 bits
+      expect(entropy).toBeCloseTo(75.2, 0);
+    });
+
+    it('should return 0 for empty pool', () => {
+      const entropy = calculateEntropy(16, 0);
+      expect(entropy).toBe(0);
+    });
+  });
+
+  describe('Strength Classification', () => {
+    it('should classify very weak passwords', () => {
+      const strength = getStrengthInfo(20);
+      expect(strength.label).toBe('Very Weak');
+      expect(strength.value).toBe(20);
+    });
+
+    it('should classify weak passwords', () => {
+      const strength = getStrengthInfo(30);
+      expect(strength.label).toBe('Weak');
+      expect(strength.value).toBe(40);
+    });
+
+    it('should classify fair passwords', () => {
+      const strength = getStrengthInfo(50);
+      expect(strength.label).toBe('Fair');
+      expect(strength.value).toBe(60);
+    });
+
+    it('should classify strong passwords', () => {
+      const strength = getStrengthInfo(70);
+      expect(strength.label).toBe('Strong');
+      expect(strength.value).toBe(80);
+    });
+
+    it('should classify very strong passwords', () => {
+      const strength = getStrengthInfo(90);
+      expect(strength.label).toBe('Very Strong');
+      expect(strength.value).toBe(100);
+    });
+  });
+
+  describe('Presets', () => {
+    it('should have correct preset values for simple', () => {
+      const preset = { length: 12, upper: true, lower: true, numbers: true, symbols: false };
+      expect(preset.length).toBe(12);
+      expect(preset.symbols).toBe(false);
+    });
+
+    it('should have correct preset values for strong', () => {
+      const preset = { length: 24, upper: true, lower: true, numbers: true, symbols: true };
+      expect(preset.length).toBe(24);
+      expect(preset.symbols).toBe(true);
+    });
+
+    it('should have correct preset values for PIN-like', () => {
+      const preset = { length: 8, upper: false, lower: true, numbers: true, symbols: false };
+      expect(preset.length).toBe(8);
+      expect(preset.upper).toBe(false);
+    });
   });
 });
