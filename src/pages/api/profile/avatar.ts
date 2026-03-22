@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Get session securely
-    const supabase = getSupabaseServerClient(cookies);
+    const supabase = getSupabaseServerClient(request, cookies);
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {

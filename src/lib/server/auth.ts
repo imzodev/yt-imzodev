@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm';
  * If requireGuest is true, it returns null or redirects to dashboard.
  */
 export async function getSession(Astro: AstroGlobal, options: { requireAuth?: boolean; requireGuest?: boolean } = {}) {
-  const supabase = getSupabaseServerClient(Astro.cookies);
+  const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
   // Use getUser() instead of getSession() for secure server-side validation
   const { data: { user }, error } = await supabase.auth.getUser();
 

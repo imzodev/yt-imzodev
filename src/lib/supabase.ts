@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient, parseCookieHeader, type CookieOptions } from '@supabase/ssr';
 import type { AstroCookies } from 'astro';
 // import type { Database } from './database.types'; // Will be generated after Supabase setup
 
@@ -30,11 +30,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Helper function to create server-side client (for Astro SSR)
-export function getSupabaseServerClient(cookies: AstroCookies) {
+export function getSupabaseServerClient(request: Request, cookies: AstroCookies) {
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
-        return Array.from(cookies.headers()).map(([name, value]) => ({ name, value }));
+        return parseCookieHeader(request.headers.get('Cookie') ?? '').map(c => ({
+          name: c.name,
+          value: c.value ?? '',
+        }));
       },
       setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         for (const cookie of cookiesToSet) {

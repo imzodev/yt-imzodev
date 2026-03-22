@@ -26,7 +26,7 @@ if (Astro.request.method === 'POST') {
     const email = formData.get('email') as string;
 
     try {
-      const supabase = getSupabaseServerClient(Astro.cookies);
+      const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${Astro.url.origin}/api/auth/callback?next=/update-password`,
       });

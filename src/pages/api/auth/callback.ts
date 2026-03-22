@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ request, cookies, redirect }) => {
   const next = requestUrl.searchParams.get('next') || '/dashboard';
 
   if (code) {
-    const supabase = getSupabaseServerClient(cookies);
+    const supabase = getSupabaseServerClient(request, cookies);
     
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     

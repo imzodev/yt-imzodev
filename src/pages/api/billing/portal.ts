@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, url }) => {
       return redirect('/profile?billing=invalid-request');
     }
 
-    const supabase = getSupabaseServerClient(cookies);
+    const supabase = getSupabaseServerClient(request, cookies);
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

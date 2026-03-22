@@ -30,7 +30,7 @@ if (Astro.request.method === 'POST') {
       error = 'Passwords do not match';
     } else {
       try {
-        const supabase = getSupabaseServerClient(Astro.cookies);
+        const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,

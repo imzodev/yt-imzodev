@@ -1,5 +1,6 @@
 DROP POLICY IF EXISTS "Public Read Access" ON public.users;
 
+DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
 CREATE POLICY "Users can view own profile"
 ON public.users
 FOR SELECT

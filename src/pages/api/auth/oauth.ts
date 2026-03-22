@@ -12,7 +12,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, url }) => {
     return redirect('/login?error=invalid_provider');
   }
 
-  const supabase = getSupabaseServerClient(cookies);
+  const supabase = getSupabaseServerClient(request, cookies);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: provider as Provider,
