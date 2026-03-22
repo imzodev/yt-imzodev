@@ -5,12 +5,16 @@
  */
 import AdminLayout from '../../components/admin/AdminLayout.astro';
 import MetricCard from '../../components/admin/MetricCard.astro';
+import { requireAdmin } from '../../lib/server/auth';
 import { getDashboardStats } from '../../lib/server/admin';
 
 export const prerender = false;
 
-// Admin auth is handled by AdminLayout
-// Get dashboard stats
+// Check admin access first before any data fetching
+const authResult = await requireAdmin(Astro);
+if (authResult instanceof Response) return authResult;
+
+// Now safe to fetch dashboard stats
 const stats = await getDashboardStats();
 ---
 
