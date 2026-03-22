@@ -55,92 +55,30 @@ const tierBadgeClass = viewer?.subscriptionTier === 'premium' ? 'badge-warning' 
 ---
 
 <Layout title={`${title} - YouTube Community Portal`} description={description}>
-  <div class="min-h-screen bg-base-200">
-    <!-- Mobile Header -->
-    <div class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-base-100 border-b border-base-300 px-4 py-3">
-      <div class="flex items-center justify-between">
+  <div class="drawer lg:drawer-open overflow-x-hidden">
+    <input id="member-drawer" type="checkbox" class="drawer-toggle" />
+    
+    <div class="drawer-content flex flex-col bg-base-200 overflow-x-hidden">
+      <!-- Mobile Header -->
+      <div class="lg:hidden sticky top-0 z-30 flex h-16 w-full justify-between items-center bg-base-100 border-b border-base-300 px-4 shadow-sm">
         <div class="flex items-center gap-3">
-          <button id="mobile-menu-btn" class="btn btn-ghost btn-sm btn-square">
+          <label for="member-drawer" class="btn btn-square btn-ghost">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
-          </button>
+          </label>
           <span class="font-bold text-lg">Portal</span>
         </div>
         <form method="POST" action="/api/auth/logout">
           <button type="submit" class="btn btn-ghost btn-sm">Sign Out</button>
         </form>
       </div>
-    </div>
-
-    <div class="flex">
-      <!-- Sidebar -->
-      <aside id="member-sidebar" class="fixed lg:sticky top-0 left-0 z-40 w-64 h-screen bg-base-100 border-r border-base-300 transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
-        <div class="flex flex-col h-full">
-          <!-- Sidebar Header -->
-          <div class="p-4 border-b border-base-300">
-            <div class="flex items-center gap-3">
-              <div class="avatar placeholder">
-                <div class="bg-primary text-primary-content rounded-full w-10">
-                  <span class="text-lg">{viewer?.name?.charAt(0) || viewer?.username?.charAt(0) || viewer?.email?.charAt(0) || 'U'}</span>
-                </div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="font-semibold text-sm truncate">{viewer?.name || viewer?.username || 'Member'}</p>
-                <span class={`badge badge-xs ${tierBadgeClass}`}>
-                  {viewer?.subscriptionTier || 'free'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Navigation -->
-          <nav class="flex-1 p-4 overflow-y-auto">
-            <ul class="menu menu-lg gap-1">
-              {navItems.map((item) => {
-                const isActive = activeNav === item.id || 
-                  (activeNav === '' && item.href === '/dashboard' && currentPath === '/dashboard') ||
-                  (item.href !== '/dashboard' && currentPath.startsWith(item.href));
-                return (
-                  <li>
-                    <a 
-                      href={item.href} 
-                      class:list={['flex items-center gap-3', { 'active': isActive }]}
-                    >
-                      <Fragment set:html={icons[item.icon]} />
-                      <span class="flex-1">{item.label}</span>
-                      {item.badge && item.badge > 0 && (
-                        <span class="badge badge-sm badge-primary">{item.badge}</span>
-                      )}
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          <!-- Sidebar Footer -->
-          <div class="p-4 border-t border-base-300">
-            <form method="POST" action="/api/auth/logout" class="w-full">
-              <button type="submit" class="btn btn-ghost btn-sm w-full justify-start gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                </svg>
-                Sign Out
-              </button>
-            </form>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Mobile Overlay -->
-      <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 lg:hidden hidden"></div>
 
       <!-- Main Content -->
-      <main class="flex-1 lg:ml-0 pt-16 lg:pt-0">
-        <div class="p-4 lg:p-8">
+      <main class="flex-1">
+        <div class="p-4 lg:p-6">
           <!-- Page Header -->
-          <div class="mb-6">
+          <div class="mb-4">
             <h1 class="text-2xl lg:text-3xl font-bold">{title}</h1>
             {description && (
               <p class="text-base-content/70 mt-1">{description}</p>
@@ -152,28 +90,121 @@ const tierBadgeClass = viewer?.subscriptionTier === 'premium' ? 'badge-warning' 
         </div>
       </main>
     </div>
+
+    <div class="drawer-side z-40 overflow-x-hidden">
+      <label for="member-drawer" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
+      
+      <aside
+        id="member-sidebar"
+        class="group bg-base-100 min-h-full w-64 flex flex-col border-r border-base-300 transition-all duration-300 overflow-x-hidden data-[collapsed=true]:w-18 lg:w-64"
+        data-collapsed="false"
+      >
+        <!-- Sidebar Header -->
+        <div class="p-4 border-b border-base-300 flex items-center justify-between">
+          <div class="flex items-center gap-3 min-w-0 sidebar-content">
+            <div class="avatar placeholder shrink-0">
+              <div class="bg-primary text-primary-content rounded-full w-10">
+                <span class="text-lg">{viewer?.name?.charAt(0) || viewer?.username?.charAt(0) || viewer?.email?.charAt(0) || 'U'}</span>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-sm truncate">{viewer?.name || viewer?.username || 'Member'}</p>
+              <span class={`badge badge-xs ${tierBadgeClass}`}>
+                {viewer?.subscriptionTier || 'free'}
+              </span>
+            </div>
+          </div>
+          <button 
+            id="sidebar-toggle" 
+            class="btn btn-ghost btn-sm btn-square hidden lg:flex shrink-0"
+            aria-label="Toggle sidebar"
+          >
+            <svg class="w-5 h-5 sidebar-icon-expanded" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+            </svg>
+            <svg class="w-5 h-5 sidebar-icon-collapsed hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 p-4 overflow-y-auto overflow-x-hidden">
+          <ul class="menu menu-lg gap-1 w-full">
+            {navItems.map((item) => {
+              const isActive = activeNav === item.id || 
+                (activeNav === '' && item.href === '/dashboard' && currentPath === '/dashboard') ||
+                (item.href !== '/dashboard' && currentPath.startsWith(item.href));
+              return (
+                <li class="w-full">
+                  <a 
+                    href={item.href} 
+                    class:list={['flex items-center gap-3 w-full rounded-lg px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-0 group-data-[collapsed=true]:px-3', { 'active': isActive }]}
+                  >
+                    <span class="shrink-0" aria-hidden="true"><Fragment set:html={icons[item.icon]} /></span>
+                    <span class="flex-1 sidebar-content">{item.label}</span>
+                    {item.badge && item.badge > 0 && (
+                      <span class="badge badge-sm badge-primary sidebar-content">{item.badge}</span>
+                    )}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-base-300">
+          <form method="POST" action="/api/auth/logout" class="w-full">
+            <button type="submit" class="btn btn-ghost btn-sm w-full justify-start gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+              <span class="sidebar-content">Sign Out</span>
+            </button>
+          </form>
+        </div>
+      </aside>
+    </div>
   </div>
 </Layout>
 
 <script>
-  // Mobile sidebar toggle
-  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-  const sidebar = document.getElementById('member-sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
+  function initSidebar() {
+    const sidebar = document.getElementById('member-sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    const drawer = document.getElementById('member-drawer') as HTMLInputElement;
+    const expandedIcon = sidebar?.querySelector('.sidebar-icon-expanded');
+    const collapsedIcon = sidebar?.querySelector('.sidebar-icon-collapsed');
 
-  function openSidebar() {
-    sidebar?.classList.remove('-translate-x-full');
-    overlay?.classList.remove('hidden');
+    const applyState = (collapsed: boolean) => {
+      if (!sidebar) return;
+      sidebar.setAttribute('data-collapsed', String(collapsed));
+      expandedIcon?.classList.toggle('hidden', collapsed);
+      collapsedIcon?.classList.toggle('hidden', !collapsed);
+      sidebar.querySelectorAll('.sidebar-content').forEach((el) => {
+        (el as HTMLElement).classList.toggle('hidden', collapsed);
+      });
+    };
+
+    // Load saved state
+    const isCollapsed = localStorage.getItem('member-sidebar-collapsed') === 'true';
+    applyState(isCollapsed);
+    
+    // Toggle sidebar
+    toggleBtn?.addEventListener('click', () => {
+      const next = sidebar?.getAttribute('data-collapsed') === 'true' ? false : true;
+      applyState(next);
+      localStorage.setItem('member-sidebar-collapsed', String(next));
+    });
+    
+    // Close drawer on navigation
+    if (drawer) {
+      drawer.checked = false;
+    }
   }
-
-  function closeSidebar() {
-    sidebar?.classList.add('-translate-x-full');
-    overlay?.classList.add('hidden');
-  }
-
-  mobileMenuBtn?.addEventListener('click', openSidebar);
-  overlay?.addEventListener('click', closeSidebar);
-
-  // Close sidebar on navigation (for Astro View Transitions)
-  document.addEventListener('astro:page-load', closeSidebar);
+  
+  // Initialize on page load
+  document.addEventListener('astro:page-load', initSidebar);
+  initSidebar();
 </script>
