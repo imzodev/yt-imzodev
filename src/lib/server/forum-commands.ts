@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { db, forumCategories, forumFollows, forumNotifications, forumPosts, forumReplies, forumReports, users } from '../../db';
 import { createForumNotification, logForumActivity } from './forum-side-effects';
 
@@ -25,6 +25,58 @@ export async function createForumCategory(input: {
     .returning();
 
   return category;
+}
+
+export async function updateForumCategory(id: number, input: {
+  name?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  accessLevel?: string;
+  order?: number;
+  isActive?: boolean;
+}) {
+  const [category] = await db
+    .update(forumCategories)
+    .set({
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.description !== undefined && { description: input.description || null }),
+      ...(input.color !== undefined && { color: input.color || null }),
+      ...(input.icon !== undefined && { icon: input.icon || null }),
+      ...(input.accessLevel !== undefined && { accessLevel: input.accessLevel }),
+      ...(input.order !== undefined && { order: input.order }),
+      ...(input.isActive !== undefined && { isActive: input.isActive }),
+    })
+    .where(eq(forumCategories.id, id))
+    .returning();
+
+  return category;
+}
+
+export async function deleteForumCategory(id: number) {
+  const [category] = await db
+    .delete(forumCategories)
+    .where(eq(forumCategories.id, id))
+    .returning();
+
+  return category;
+}
+
+export async function getForumCategoryById(id: number) {
+  const [category] = await db
+    .select()
+    .from(forumCategories)
+    .where(eq(forumCategories.id, id))
+    .limit(1);
+
+  return category ?? null;
+}
+
+export async function getAllForumCategories() {
+  return db
+    .select()
+    .from(forumCategories)
+    .orderBy(asc(forumCategories.order), asc(forumCategories.name));
 }
 
 export async function createForumThread(input: {

@@ -1,7 +1,6 @@
 import {
   canAccessCategory,
   canModerate,
-  createForumCategory,
   createForumReport,
   createForumReply,
   createForumThread,
@@ -64,28 +63,6 @@ export async function handleForumIndexAction(input: {
     return withFeedback(`/forum/thread/${thread.id}`, {
       type: 'success',
       message: thread.status === 'pending' ? 'Your thread was submitted for review.' : 'Your discussion is live.',
-    });
-  }
-
-  if (intent === 'create-category') {
-    if (!canModerate(input.viewer)) {
-      throw new Error('Only moderators can create forum categories.');
-    }
-
-    const name = String(input.formData.get('name') || '').trim();
-    const description = String(input.formData.get('description') || '').trim();
-    const color = String(input.formData.get('color') || '').trim();
-    const accessLevel = String(input.formData.get('access_level') || 'public').trim();
-
-    if (!name) {
-      throw new Error('A category name is required.');
-    }
-
-    await createForumCategory({ name, description, color, accessLevel });
-
-    return withFeedback(input.requestUrl.pathname, {
-      type: 'success',
-      message: 'Category created successfully.',
     });
   }
 

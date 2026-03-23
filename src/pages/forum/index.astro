@@ -126,47 +126,12 @@ const unreadNotifications = viewer ? await getUnreadNotificationCount(viewer.id)
                   </a>
                 )) : (
                   <div class="rounded-2xl border border-dashed border-base-300 p-4 text-sm text-base-content/70">
-                    No categories yet. {canModerate(viewer) ? 'Create the first one below.' : 'A moderator will add categories soon.'}
+                    No categories yet. {canModerate(viewer) ? 'Create categories in the admin dashboard.' : 'A moderator will add categories soon.'}
                   </div>
                 )}
               </div>
             </div>
           </section>
-
-          {canModerate(viewer) && (
-            <section class="card bg-base-100 shadow-lg">
-              <div class="card-body">
-                <h2 class="card-title text-xl">Create category</h2>
-                <form method="POST" class="space-y-4">
-                  <input type="hidden" name="csrf_token" value={csrfToken} />
-                  <input type="hidden" name="intent" value="create-category" />
-                  <label class="form-control w-full">
-                    <div class="label"><span class="label-text">Name</span></div>
-                    <input type="text" name="name" class="input input-bordered w-full" required />
-                  </label>
-                  <label class="form-control w-full">
-                    <div class="label"><span class="label-text">Description</span></div>
-                    <textarea name="description" class="textarea textarea-bordered min-h-24"></textarea>
-                  </label>
-                  <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="form-control w-full">
-                      <div class="label"><span class="label-text">Color</span></div>
-                      <input type="text" name="color" class="input input-bordered w-full" placeholder="#8b5cf6" />
-                    </label>
-                    <label class="form-control w-full">
-                      <div class="label"><span class="label-text">Access</span></div>
-                      <select name="access_level" class="select select-bordered w-full">
-                        <option value="public">Public</option>
-                        <option value="member">Member</option>
-                        <option value="premium">Premium</option>
-                      </select>
-                    </label>
-                  </div>
-                  <button type="submit" class="btn btn-primary w-full">Create category</button>
-                </form>
-              </div>
-            </section>
-          )}
 
           <section class="card bg-base-100 shadow-lg">
             <div class="card-body">
