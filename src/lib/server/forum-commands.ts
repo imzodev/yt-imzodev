@@ -29,9 +29,9 @@ export async function createForumCategory(input: {
 
 export async function updateForumCategory(id: number, input: {
   name?: string;
-  description?: string;
-  color?: string;
-  icon?: string;
+  description?: string | null;
+  color?: string | null;
+  icon?: string | null;
   accessLevel?: string;
   order?: number;
   isActive?: boolean;
@@ -40,9 +40,9 @@ export async function updateForumCategory(id: number, input: {
     .update(forumCategories)
     .set({
       ...(input.name !== undefined && { name: input.name }),
-      ...(input.description !== undefined && { description: input.description || null }),
-      ...(input.color !== undefined && { color: input.color || null }),
-      ...(input.icon !== undefined && { icon: input.icon || null }),
+      ...(input.description !== undefined && { description: input.description }),
+      ...(input.color !== undefined && { color: input.color }),
+      ...(input.icon !== undefined && { icon: input.icon }),
       ...(input.accessLevel !== undefined && { accessLevel: input.accessLevel }),
       ...(input.order !== undefined && { order: input.order }),
       ...(input.isActive !== undefined && { isActive: input.isActive }),
@@ -50,16 +50,18 @@ export async function updateForumCategory(id: number, input: {
     .where(eq(forumCategories.id, id))
     .returning();
 
-  return category;
+  return category ?? null;
 }
 
 export async function deleteForumCategory(id: number) {
+  // Soft delete by setting isActive to false
   const [category] = await db
-    .delete(forumCategories)
+    .update(forumCategories)
+    .set({ isActive: false })
     .where(eq(forumCategories.id, id))
     .returning();
 
-  return category;
+  return category ?? null;
 }
 
 export async function getForumCategoryById(id: number) {

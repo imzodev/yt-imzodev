@@ -1,0 +1,282 @@
+---
+/**
+ * Admin Forum Categories Page
+ * Manage forum categories from the admin dashboard.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import Alert from '../../../components/ui/Alert.astro';
+import { requireAdmin } from '../../../lib/server/auth';
+import { getCsrfToken } from '../../../lib/server/csrf';
+import { 
+  getAllForumCategories, 
+  createForumCategory, 
+  updateForumCategory, 
+  deleteForumCategory
+} from '../../../lib/server/forum';
+import { validateCsrfToken } from '../../../lib/server/csrf';
+
+export const prerender = false;
+
+// Check admin access
+const authResult = await requireAdmin(Astro);
+if (authResult instanceof Response) return authResult;
+
+const csrfToken = getCsrfToken(Astro.cookies);
+
+// Handle form submissions
+let feedbackMessage = '';
+let feedbackType: 'success' | 'error' | null = null;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const intent = String(formData.get('intent') || '');
+
+  // Validate CSRF token
+  if (!validateCsrfToken(Astro.cookies, formData.get('csrf_token') as string | null)) {
+    feedbackMessage = 'Invalid request. Please try again.';
+    feedbackType = 'error';
+  } else {
+    try {
+      if (intent === 'create-category') {
+        const name = String(formData.get('name') || '').trim();
+        const description = String(formData.get('description') || '').trim();
+        const color = String(formData.get('color') || '').trim();
+        const accessLevel = String(formData.get('access_level') || 'public').trim();
+        const order = parseInt(String(formData.get('order') || '0'), 10);
+
+        if (!name) {
+          throw new Error('Category name is required.');
+        }
+
+        await createForumCategory({
+          name,
+          description: description || undefined,
+          color: color || undefined,
+          accessLevel,
+          order: order || 0,
+        });
+
+        feedbackMessage = 'Category created successfully.';
+        feedbackType = 'success';
+      } else if (intent === 'update-category') {
+        const categoryId = parseInt(String(formData.get('category_id') || ''), 10);
+        const name = String(formData.get('name') || '').trim();
+        const description = String(formData.get('description') || '').trim();
+        const color = String(formData.get('color') || '').trim();
+        const accessLevel = String(formData.get('access_level') || '').trim();
+        const order = parseInt(String(formData.get('order') || '1'), 10);
+        const isActive = formData.get('is_active') === 'on';
+
+        if (!categoryId) {
+          throw new Error('Category ID is required.');
+        }
+
+        await updateForumCategory(categoryId, {
+          name: name || undefined,
+          description: description || undefined,
+          color: color || undefined,
+          accessLevel: accessLevel || undefined,
+          order: order || undefined,
+          isActive,
+        });
+
+        feedbackMessage = 'Category updated successfully.';
+        feedbackType = 'success';
+      } else if (intent === 'delete-category') {
+        const categoryId = parseInt(String(formData.get('category_id') || ''), 10);
+
+        if (!categoryId) {
+          throw new Error('Category ID is required.');
+        }
+
+        await deleteForumCategory(categoryId);
+
+        feedbackMessage = 'Category deleted successfully.';
+        feedbackType = 'success';
+      }
+    } catch (error) {
+      feedbackMessage = error instanceof Error ? error.message : 'An error occurred.';
+      feedbackType = 'error';
+    }
+  }
+}
+
+// Fetch all categories
+const categories = await getAllForumCategories();
+---
+
+<AdminLayout 
+  title="Forum Categories" 
+  description="Create, edit, and delete forum categories"
+  activeNav="categories"
+>
+  {feedbackMessage && feedbackType && (
+    <Alert type={feedbackType} message={feedbackMessage} />
+  )}
+
+  <!-- Categories List -->
+  <div class="bg-base-100 shadow rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Access Level</th>
+            <th>Order</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {categories.length > 0 ? categories.map((category) => (
+            <tr>
+              <td>
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full" style={`background:${category.color || '#8b5cf6'}`}></span>
+                  <span class="font-medium">{category.name}</span>
+                </div>
+              </td>
+              <td class="max-w-xs truncate">{category.description || '—'}</td>
+              <td>
+                <span class={`badge badge-${category.accessLevel === 'premium' ? 'warning' : category.accessLevel === 'member' ? 'info' : 'ghost'}`}>
+                  {category.accessLevel}
+                </span>
+              </td>
+              <td>{category.order}</td>
+              <td>
+                <span class={`badge ${category.isActive ? 'badge-success' : 'badge-error'}`}>
+                  {category.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </td>
+              <td>
+                <div class="flex gap-2">
+                  <button 
+                    class="btn btn-sm btn-info"
+                    onclick={`document.getElementById('edit-${category.id}').showModal()`}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-error"
+                    onclick={`if(confirm('Are you sure you want to delete this category?')) { document.getElementById('delete-${category.id}').submit(); }`}
+                  >
+                    Delete
+                  </button>
+                </div>
+                
+                <!-- Edit Modal -->
+                <dialog id={`edit-${category.id}`} class="modal">
+                  <div class="modal-box">
+                    <form method="POST" class="modal-body">
+                      <input type="hidden" name="csrf_token" value={csrfToken} />
+                      <input type="hidden" name="intent" value="update-category" />
+                      <input type="hidden" name="category_id" value={category.id} />
+                      
+                      <h3 class="font-bold text-lg mb-4">Edit Category</h3>
+                      
+                      <div class="form-control w-full mb-4">
+                        <label class="label"><span class="label-text">Name</span></label>
+                        <input type="text" name="name" value={category.name} class="input input-bordered w-full" required />
+                      </div>
+                      
+                      <div class="form-control w-full mb-4">
+                        <label class="label"><span class="label-text">Description</span></label>
+                        <textarea name="description" class="textarea textarea-bordered w-full">{category.description || ''}</textarea>
+                      </div>
+                      
+                      <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="form-control w-full">
+                          <label class="label"><span class="label-text">Color</span></label>
+                          <input type="text" name="color" value={category.color || '#8b5cf6'} class="input input-bordered w-full" placeholder="#8b5cf6" />
+                        </div>
+                        <div class="form-control w-full">
+                          <label class="label"><span class="label-text">Order</span></label>
+                          <input type="number" name="order" value={category.order} class="input input-bordered w-full" />
+                        </div>
+                      </div>
+                      
+                      <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="form-control w-full">
+                          <label class="label"><span class="label-text">Access Level</span></label>
+                          <select name="access_level" class="select select-bordered w-full">
+                            <option value="public" selected={category.accessLevel === 'public'}>Public</option>
+                            <option value="member" selected={category.accessLevel === 'member'}>Member</option>
+                            <option value="premium" selected={category.accessLevel === 'premium'}>Premium</option>
+                          </select>
+                        </div>
+                        <div class="form-control w-full">
+                          <label class="label"><span class="label-text">Active</span></label>
+                          <input type="checkbox" name="is_active" class="toggle toggle-primary" checked={category.isActive} />
+                        </div>
+                      </div>
+                      
+                      <div class="modal-action">
+                        <button type="button" class="btn btn-ghost" onclick={`document.getElementById('edit-${category.id}').close()`}>Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                      </div>
+                    </form>
+                  </div>
+                  <form method="POST" class="modal-backdrop" id={`delete-${category.id}`}>
+                    <input type="hidden" name="csrf_token" value={csrfToken} />
+                    <input type="hidden" name="intent" value="delete-category" />
+                    <input type="hidden" name="category_id" value={category.id} />
+                  </form>
+                </dialog>
+              </td>
+            </tr>
+          )) : (
+            <tr>
+              <td colspan="6" class="text-center py-8 text-base-content/60">
+                No categories found. Create the first one below.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Category Form -->
+  <div class="bg-base-100 shadow rounded-lg p-6 mt-8">
+    <h2 class="text-xl font-semibold mb-4">Create New Category</h2>
+    <form method="POST" class="space-y-4">
+      <input type="hidden" name="csrf_token" value={csrfToken} />
+      <input type="hidden" name="intent" value="create-category" />
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text">Name *</span></label>
+          <input type="text" name="name" class="input input-bordered w-full" placeholder="Category name" required />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text">Description</span></label>
+          <input type="text" name="description" class="input input-bordered w-full" placeholder="Brief description" />
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text">Color</span></label>
+          <input type="text" name="color" class="input input-bordered w-full" placeholder="#8b5cf6" value="#8b5cf6" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text">Access Level</span></label>
+          <select name="access_level" class="select select-bordered w-full">
+            <option value="public">Public</option>
+            <option value="member">Member</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text">Order</span></label>
+          <input type="number" name="order" class="input input-bordered w-full" value="1" />
+        </div>
+      </div>
+      
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Create Category</button>
+      </div>
+    </form>
+  </div>
+</AdminLayout>

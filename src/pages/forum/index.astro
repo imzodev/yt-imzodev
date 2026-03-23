@@ -133,6 +133,16 @@ const unreadNotifications = viewer ? await getUnreadNotificationCount(viewer.id)
             </div>
           </section>
 
+          {canModerate(viewer) && (
+            <div class="card bg-base-100 shadow-lg">
+              <div class="card-body">
+                <p class="text-sm text-base-content/70">
+                  <a href="/admin/categories" class="link link-primary">Manage categories</a> in the admin dashboard.
+                </p>
+              </div>
+            </div>
+          )}
+
           <section class="card bg-base-100 shadow-lg">
             <div class="card-body">
               <div class="flex items-center justify-between">
