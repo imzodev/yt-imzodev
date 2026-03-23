@@ -1,0 +1,634 @@
+---
+/**
+ * Admin Blog Posts Page
+ * Manage blog posts with CRUD operations using DaisyUI components.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import Alert from '../../../components/ui/Alert.astro';
+import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+import { 
+  getAllBlogPosts, 
+  getBlogPostById,
+  createBlogPost, 
+  updateBlogPost, 
+  deleteBlogPost,
+  getAllBlogCategories,
+  getBlogPostStats,
+  generateSlug
+} from '../../../lib/server/blog-commands';
+
+export const prerender = false;
+
+const csrfToken = getCsrfToken(Astro.cookies);
+let feedbackMessage = '';
+let feedbackType: 'success' | 'error' | null = null;
+
+// Handle form submissions
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  
+  if (!validateCsrfToken(Astro.cookies, formData.get('csrf_token') as string | null)) {
+    feedbackType = 'error';
+    feedbackMessage = 'Invalid request. Please try again.';
+  } else {
+    const intent = String(formData.get('intent') || '');
+    
+    try {
+      if (intent === 'create') {
+        const title = String(formData.get('title') || '').trim();
+        const slug = String(formData.get('slug') || '').trim();
+        const content = String(formData.get('content') || '').trim();
+        const excerpt = String(formData.get('excerpt') || '').trim();
+        const featuredImage = String(formData.get('featured_image') || '').trim();
+        const categoryId = formData.get('category_id') ? parseInt(String(formData.get('category_id')), 10) : null;
+        const accessLevel = String(formData.get('access_level') || 'public');
+        const tagsStr = String(formData.get('tags') || '').trim();
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+        const status = String(formData.get('status') || 'draft');
+        const featured = formData.get('featured') === 'on';
+        
+        if (!title || !content) {
+          throw new Error('Title and content are required.');
+        }
+        
+        await createBlogPost({ 
+          title, 
+          slug: slug || undefined,
+          content, 
+          excerpt, 
+          featuredImage,
+          categoryId: categoryId || undefined,
+          accessLevel, 
+          tags, 
+          status,
+          featured
+        });
+        feedbackType = 'success';
+        feedbackMessage = status === 'published' 
+          ? 'Blog post published successfully.' 
+          : 'Blog post created as draft.';
+      }
+      
+      if (intent === 'update') {
+        const id = parseInt(String(formData.get('id') || '0'), 10);
+        const title = String(formData.get('title') || '').trim();
+        const slug = String(formData.get('slug') || '').trim();
+        const content = String(formData.get('content') || '').trim();
+        const excerpt = String(formData.get('excerpt') || '').trim();
+        const featuredImage = String(formData.get('featured_image') || '').trim();
+        const categoryId = formData.get('category_id') ? parseInt(String(formData.get('category_id')), 10) : null;
+        const accessLevel = String(formData.get('access_level') || 'public');
+        const tagsStr = String(formData.get('tags') || '').trim();
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+        const status = String(formData.get('status') || 'draft');
+        const featured = formData.get('featured') === 'on';
+        
+        if (!id) {
+          throw new Error('Post ID is required.');
+        }
+        
+        if (!title || !content) {
+          throw new Error('Title and content are required.');
+        }
+        
+        await updateBlogPost(id, { 
+          title, 
+          slug,
+          content, 
+          excerpt, 
+          featuredImage,
+          categoryId, 
+          accessLevel, 
+          tags, 
+          status,
+          featured
+        });
+        feedbackType = 'success';
+        feedbackMessage = 'Blog post updated successfully.';
+      }
+      
+      if (intent === 'delete') {
+        const id = parseInt(String(formData.get('id') || '0'), 10);
+        
+        if (!id) {
+          throw new Error('Post ID is required.');
+        }
+        
+        await deleteBlogPost(id);
+        feedbackType = 'success';
+        feedbackMessage = 'Blog post deleted successfully.';
+      }
+    } catch (error) {
+      feedbackType = 'error';
+      feedbackMessage = error instanceof Error ? error.message : 'An error occurred.';
+    }
+  }
+}
+
+// Get URL params for filtering
+const searchParams = Astro.url.searchParams;
+const filterStatus = searchParams.get('status');
+const filterAccess = searchParams.get('access');
+const searchQuery = searchParams.get('search');
+
+// Get posts and categories
+const posts = await getAllBlogPosts({
+  status: filterStatus || undefined,
+  accessLevel: filterAccess || undefined,
+  search: searchQuery || undefined,
+  limit: 100,
+});
+const categories = await getAllBlogCategories();
+const stats = await getBlogPostStats();
+---
+
+<AdminLayout 
+  title="Blog Posts" 
+  description="Create, edit, and publish blog posts"
+  activeNav="blog"
+>
+  {feedbackMessage && feedbackType && (
+    <Alert type={feedbackType} message={feedbackMessage} />
+  )}
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Total</div>
+      <div class="stat-value text-2xl">{stats.total}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Published</div>
+      <div class="stat-value text-2xl text-success">{stats.published}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Drafts</div>
+      <div class="stat-value text-2xl text-warning">{stats.drafts}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title">Categories</div>
+      <div class="stat-value text-2xl">{stats.categories}</div>
+    </div>
+  </div>
+
+  <div class="grid gap-6">
+    <!-- Filters and Actions -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap gap-2">
+        <input 
+          type="text" 
+          placeholder="Search posts..." 
+          class="input input-bordered w-full max-w-xs"
+          id="search-input"
+          value={searchQuery || ''}
+        />
+        <select class="select select-bordered" id="status-filter">
+          <option value="">All Status</option>
+          <option value="draft" selected={filterStatus === 'draft'}>Draft</option>
+          <option value="published" selected={filterStatus === 'published'}>Published</option>
+          <option value="archived" selected={filterStatus === 'archived'}>Archived</option>
+        </select>
+        <select class="select select-bordered" id="access-filter">
+          <option value="">All Access</option>
+          <option value="public" selected={filterAccess === 'public'}>Public</option>
+          <option value="member" selected={filterAccess === 'member'}>Member</option>
+          <option value="premium" selected={filterAccess === 'premium'}>Premium</option>
+        </select>
+      </div>
+      <label for="create-modal" class="btn btn-primary gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        New Post
+      </label>
+    </div>
+
+    <!-- Posts Table -->
+    <div class="bg-base-100 shadow rounded-lg overflow-hidden">
+      {posts.length > 0 ? (
+        <div class="overflow-x-auto">
+          <table class="table table-zebra w-full">
+            <thead>
+              <tr>
+                <th>Post</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Access</th>
+                <th>Published</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((post) => (
+                <tr id={`post-row-${post.id}`}>
+                  <td>
+                    <div class="max-w-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold truncate">{post.title}</span>
+                        {post.featured && (
+                          <span class="badge badge-warning badge-xs">Featured</span>
+                        )}
+                      </div>
+                      <div class="text-sm opacity-50 truncate">{post.excerpt || post.slug}</div>
+                    </div>
+                  </td>
+                  <td>
+                    {post.category?.name ? (
+                      <span class="badge badge-outline badge-sm">{post.category.name}</span>
+                    ) : (
+                      <span class="text-base-content/50">-</span>
+                    )}
+                  </td>
+                  <td>
+                    <span class={`badge badge-sm ${
+                      post.status === 'published' ? 'badge-success' :
+                      post.status === 'draft' ? 'badge-warning' :
+                      'badge-ghost'
+                    }`}>
+                      {post.status}
+                    </span>
+                  </td>
+                  <td>
+                    <span class={`badge badge-sm ${
+                      post.accessLevel === 'premium' ? 'badge-secondary' :
+                      post.accessLevel === 'member' ? 'badge-accent' :
+                      'badge-ghost'
+                    }`}>
+                      {post.accessLevel}
+                    </span>
+                  </td>
+                  <td class="text-sm">
+                    {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : '-'}
+                  </td>
+                  <td>
+                    <div class="flex gap-1">
+                      {post.status === 'published' && (
+                        <a 
+                          href={`/blog/${post.slug}`} 
+                          target="_blank"
+                          class="btn btn-ghost btn-xs btn-square"
+                          aria-label="View post"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </a>
+                      )}
+                      <label 
+                        for={`edit-modal-${post.id}`} 
+                        class="btn btn-ghost btn-xs btn-square"
+                        aria-label="Edit post"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </label>
+                      <label 
+                        for={`delete-modal-${post.id}`} 
+                        class="btn btn-ghost btn-xs btn-square text-error"
+                        aria-label="Delete post"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="p-8 text-center text-base-content/70">
+          <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-.586-1.414l-4.5-4.5A2 2 0 0012.586 3H12"></path>
+          </svg>
+          <p>No posts found. {searchQuery ? 'Try adjusting your filters.' : 'Create the first post!'}</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Create Modal -->
+  <input type="checkbox" id="create-modal" class="modal-toggle" />
+  <div class="modal">
+    <div class="modal-box max-w-4xl">
+      <h3 class="font-bold text-lg mb-4">Create Blog Post</h3>
+      <form method="POST" class="space-y-4">
+        <input type="hidden" name="csrf_token" value={csrfToken} />
+        <input type="hidden" name="intent" value="create" />
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Title *</span></div>
+            <input 
+              type="text" 
+              name="title" 
+              id="create-title"
+              class="input input-bordered w-full" 
+              placeholder="Post title"
+              required 
+            />
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Slug (auto-generated if empty)</span></div>
+            <input 
+              type="text" 
+              name="slug" 
+              id="create-slug"
+              class="input input-bordered w-full" 
+              placeholder="my-post-slug"
+            />
+          </label>
+        </div>
+        
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text">Excerpt / Summary</span></div>
+          <input 
+            type="text" 
+            name="excerpt" 
+            class="input input-bordered w-full" 
+            placeholder="Brief summary for listings and SEO"
+          />
+        </label>
+        
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text">Content * (Markdown)</span></div>
+          <textarea 
+            name="content" 
+            class="textarea textarea-bordered w-full font-mono text-sm min-h-64"
+            placeholder="# Your post content here..."
+            required
+          ></textarea>
+        </label>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Category</span></div>
+            <select name="category_id" class="select select-bordered w-full">
+              <option value="">None</option>
+              {categories.map((cat) => (
+                <option value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Access Level</span></div>
+            <select name="access_level" class="select select-bordered w-full">
+              <option value="public">Public</option>
+              <option value="member">Member</option>
+              <option value="premium">Premium</option>
+            </select>
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Status</span></div>
+            <select name="status" class="select select-bordered w-full">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Featured</span></div>
+            <label class="label cursor-pointer justify-start gap-4 mt-2">
+              <input 
+                type="checkbox" 
+                name="featured" 
+                class="checkbox checkbox-primary"
+              />
+              <span class="label-text">Featured post</span>
+            </label>
+          </label>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Cover Image URL</span></div>
+            <input 
+              type="url" 
+              name="featured_image" 
+              class="input input-bordered w-full" 
+              placeholder="https://example.com/image.jpg"
+            />
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Tags (comma-separated)</span></div>
+            <input 
+              type="text" 
+              name="tags" 
+              class="input input-bordered w-full" 
+              placeholder="javascript, tutorial, beginners"
+            />
+          </label>
+        </div>
+        
+        <div class="modal-action">
+          <label for="create-modal" class="btn btn-ghost">Cancel</label>
+          <button type="submit" class="btn btn-primary">Create Post</button>
+        </div>
+      </form>
+    </div>
+    <label class="modal-backdrop" for="create-modal">Close</label>
+  </div>
+
+  <!-- Edit and Delete Modals for each post -->
+  {posts.map((post) => (
+    <>
+      <!-- Edit Modal -->
+      <input type="checkbox" id={`edit-modal-${post.id}`} class="modal-toggle" />
+      <div class="modal">
+        <div class="modal-box max-w-4xl">
+          <h3 class="font-bold text-lg mb-4">Edit Blog Post</h3>
+          <form method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value={csrfToken} />
+            <input type="hidden" name="intent" value="update" />
+            <input type="hidden" name="id" value={post.id} />
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Title *</span></div>
+                <input 
+                  type="text" 
+                  name="title" 
+                  class="input input-bordered w-full" 
+                  value={post.title}
+                  required 
+                />
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Slug</span></div>
+                <input 
+                  type="text" 
+                  name="slug" 
+                  class="input input-bordered w-full" 
+                  value={post.slug}
+                />
+              </label>
+            </div>
+            
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text">Excerpt / Summary</span></div>
+              <input 
+                type="text" 
+                name="excerpt" 
+                class="input input-bordered w-full" 
+                value={post.excerpt || ''}
+              />
+            </label>
+            
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text">Content * (Markdown)</span></div>
+              <textarea 
+                name="content" 
+                class="textarea textarea-bordered w-full font-mono text-sm min-h-64"
+                required
+              >{post.content}</textarea>
+            </label>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Category</span></div>
+                <select name="category_id" class="select select-bordered w-full">
+                  <option value="" selected={!post.categoryId}>None</option>
+                  {categories.map((cat) => (
+                    <option value={cat.id} selected={post.categoryId === cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Access Level</span></div>
+                <select name="access_level" class="select select-bordered w-full">
+                  <option value="public" selected={post.accessLevel === 'public'}>Public</option>
+                  <option value="member" selected={post.accessLevel === 'member'}>Member</option>
+                  <option value="premium" selected={post.accessLevel === 'premium'}>Premium</option>
+                </select>
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Status</span></div>
+                <select name="status" class="select select-bordered w-full">
+                  <option value="draft" selected={post.status === 'draft'}>Draft</option>
+                  <option value="published" selected={post.status === 'published'}>Published</option>
+                  <option value="archived" selected={post.status === 'archived'}>Archived</option>
+                </select>
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Featured</span></div>
+                <label class="label cursor-pointer justify-start gap-4 mt-2">
+                  <input 
+                    type="checkbox" 
+                    name="featured" 
+                    class="checkbox checkbox-primary"
+                    checked={post.featured}
+                  />
+                  <span class="label-text">Featured post</span>
+                </label>
+              </label>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Cover Image URL</span></div>
+                <input 
+                  type="url" 
+                  name="featured_image" 
+                  class="input input-bordered w-full" 
+                  value={post.featuredImage || ''}
+                />
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Tags (comma-separated)</span></div>
+                <input 
+                  type="text" 
+                  name="tags" 
+                  class="input input-bordered w-full" 
+                  value={(post.tags as string[] || []).join(', ')}
+                />
+              </label>
+            </div>
+            
+            <div class="modal-action">
+              <label for={`edit-modal-${post.id}`} class="btn btn-ghost">Cancel</label>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+        <label class="modal-backdrop" for={`edit-modal-${post.id}`}>Close</label>
+      </div>
+
+      <!-- Delete Modal -->
+      <input type="checkbox" id={`delete-modal-${post.id}`} class="modal-toggle" />
+      <div class="modal">
+        <div class="modal-box">
+          <h3 class="font-bold text-lg mb-2">Delete Blog Post</h3>
+          <p class="py-4">
+            Are you sure you want to delete <strong>{post.title}</strong>? 
+            This action cannot be undone.
+          </p>
+          <form method="POST">
+            <input type="hidden" name="csrf_token" value={csrfToken} />
+            <input type="hidden" name="intent" value="delete" />
+            <input type="hidden" name="id" value={post.id} />
+            
+            <div class="modal-action">
+              <label for={`delete-modal-${post.id}`} class="btn btn-ghost">Cancel</label>
+              <button type="submit" class="btn btn-error">Delete</button>
+            </div>
+          </form>
+        </div>
+        <label class="modal-backdrop" for={`delete-modal-${post.id}`}>Close</label>
+      </div>
+    </>
+  ))}
+</AdminLayout>
+
+<script>
+  // Auto-generate slug from title
+  const createTitle = document.getElementById('create-title') as HTMLInputElement;
+  const createSlug = document.getElementById('create-slug') as HTMLInputElement;
+  
+  createTitle?.addEventListener('input', () => {
+    if (createSlug && !createSlug.value) {
+      const slug = createTitle.value
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      createSlug.value = slug;
+    }
+  });
+
+  // Client-side filtering
+  function applyFilters() {
+    const search = document.getElementById('search-input') as HTMLInputElement;
+    const status = document.getElementById('status-filter') as HTMLSelectElement;
+    const access = document.getElementById('access-filter') as HTMLSelectElement;
+    
+    const params = new URLSearchParams();
+    if (search?.value) params.set('search', search.value);
+    if (status?.value) params.set('status', status.value);
+    if (access?.value) params.set('access', access.value);
+    
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    window.location.href = newUrl;
+  }
+
+  document.getElementById('search-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') applyFilters();
+  });
+  
+  document.getElementById('status-filter')?.addEventListener('change', applyFilters);
+  document.getElementById('access-filter')?.addEventListener('change', applyFilters);
+</script>
