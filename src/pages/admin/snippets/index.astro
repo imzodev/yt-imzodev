@@ -1,0 +1,574 @@
+---
+/**
+ * Admin Snippets Page
+ * Manage code snippets with CRUD operations using DaisyUI components.
+ */
+import AdminLayout from '../../../components/admin/AdminLayout.astro';
+import Alert from '../../../components/ui/Alert.astro';
+import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+import { 
+  getAllSnippets, 
+  getSnippetById,
+  createSnippet, 
+  updateSnippet, 
+  deleteSnippet,
+  getAllSnippetCategories,
+  getSnippetLanguages
+} from '../../../lib/server/snippet-commands';
+
+export const prerender = false;
+
+const csrfToken = getCsrfToken(Astro.cookies);
+let feedbackMessage = '';
+let feedbackType: 'success' | 'error' | null = null;
+
+// Handle form submissions
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  
+  if (!validateCsrfToken(Astro.cookies, formData.get('csrf_token') as string | null)) {
+    feedbackType = 'error';
+    feedbackMessage = 'Invalid request. Please try again.';
+  } else {
+    const intent = String(formData.get('intent') || '');
+    
+    try {
+      if (intent === 'create') {
+        const title = String(formData.get('title') || '').trim();
+        const content = String(formData.get('content') || '').trim();
+        const language = String(formData.get('language') || '').trim();
+        const type = String(formData.get('type') || 'code');
+        const description = String(formData.get('description') || '').trim();
+        const categoryId = formData.get('category_id') ? parseInt(String(formData.get('category_id')), 10) : null;
+        const accessLevel = String(formData.get('access_level') || 'public');
+        const tagsStr = String(formData.get('tags') || '').trim();
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+        const isActive = formData.get('is_active') === 'on';
+        
+        if (!title || !content || !language) {
+          throw new Error('Title, content, and language are required.');
+        }
+        
+        await createSnippet({ 
+          title, content, language, type, description, 
+          categoryId: categoryId || undefined,
+          accessLevel, tags, isActive 
+        });
+        feedbackType = 'success';
+        feedbackMessage = 'Snippet created successfully.';
+      }
+      
+      if (intent === 'update') {
+        const id = parseInt(String(formData.get('id') || '0'), 10);
+        const title = String(formData.get('title') || '').trim();
+        const content = String(formData.get('content') || '').trim();
+        const language = String(formData.get('language') || '').trim();
+        const type = String(formData.get('type') || 'code');
+        const description = String(formData.get('description') || '').trim();
+        const categoryId = formData.get('category_id') ? parseInt(String(formData.get('category_id')), 10) : null;
+        const accessLevel = String(formData.get('access_level') || 'public');
+        const tagsStr = String(formData.get('tags') || '').trim();
+        const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+        const isActive = formData.get('is_active') === 'on';
+        
+        if (!id) {
+          throw new Error('Snippet ID is required.');
+        }
+        
+        if (!title || !content || !language) {
+          throw new Error('Title, content, and language are required.');
+        }
+        
+        await updateSnippet(id, { 
+          title, content, language, type, description, 
+          categoryId, accessLevel, tags, isActive 
+        });
+        feedbackType = 'success';
+        feedbackMessage = 'Snippet updated successfully.';
+      }
+      
+      if (intent === 'delete') {
+        const id = parseInt(String(formData.get('id') || '0'), 10);
+        
+        if (!id) {
+          throw new Error('Snippet ID is required.');
+        }
+        
+        await deleteSnippet(id);
+        feedbackType = 'success';
+        feedbackMessage = 'Snippet deleted successfully.';
+      }
+    } catch (error) {
+      feedbackType = 'error';
+      feedbackMessage = error instanceof Error ? error.message : 'An error occurred.';
+    }
+  }
+}
+
+// Get URL params for filtering
+const searchParams = Astro.url.searchParams;
+const filterLanguage = searchParams.get('language');
+const filterType = searchParams.get('type');
+const filterAccess = searchParams.get('access');
+const searchQuery = searchParams.get('search');
+
+// Get snippets and categories
+const snippetsList = await getAllSnippets({
+  language: filterLanguage || undefined,
+  type: filterType || undefined,
+  accessLevel: filterAccess || undefined,
+  search: searchQuery || undefined,
+  limit: 100,
+});
+const categories = await getAllSnippetCategories();
+const languages = await getSnippetLanguages();
+
+// Common languages for the dropdown
+const commonLanguages = [
+  'javascript', 'typescript', 'python', 'java', 'csharp', 
+  'cpp', 'go', 'rust', 'ruby', 'php', 'swift', 'kotlin',
+  'html', 'css', 'scss', 'sql', 'bash', 'json', 'yaml', 'markdown'
+];
+---
+
+<AdminLayout 
+  title="Snippets" 
+  description="Manage code snippets and utilities"
+  activeNav="snippets"
+>
+  {feedbackMessage && feedbackType && (
+    <Alert type={feedbackType} message={feedbackMessage} />
+  )}
+
+  <div class="grid gap-6">
+    <!-- Filters and Actions -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap gap-2">
+        <input 
+          type="text" 
+          placeholder="Search snippets..." 
+          class="input input-bordered w-full max-w-xs"
+          id="search-input"
+          value={searchQuery || ''}
+        />
+        <select class="select select-bordered" id="language-filter">
+          <option value="">All Languages</option>
+          {languages.map((lang) => (
+            <option value={lang} selected={filterLanguage === lang}>{lang}</option>
+          ))}
+        </select>
+        <select class="select select-bordered" id="type-filter">
+          <option value="">All Types</option>
+          <option value="code" selected={filterType === 'code'}>Code</option>
+          <option value="command" selected={filterType === 'command'}>Command</option>
+          <option value="config" selected={filterType === 'config'}>Config</option>
+        </select>
+        <select class="select select-bordered" id="access-filter">
+          <option value="">All Access</option>
+          <option value="public" selected={filterAccess === 'public'}>Public</option>
+          <option value="member" selected={filterAccess === 'member'}>Member</option>
+          <option value="premium" selected={filterAccess === 'premium'}>Premium</option>
+        </select>
+      </div>
+      <label for="create-modal" class="btn btn-primary gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Create Snippet
+      </label>
+    </div>
+
+    <!-- Snippets Table -->
+    <div class="bg-base-100 shadow rounded-lg overflow-hidden">
+      {snippetsList.length > 0 ? (
+        <div class="overflow-x-auto">
+          <table class="table table-zebra w-full">
+            <thead>
+              <tr>
+                <th>Snippet</th>
+                <th>Language</th>
+                <th>Type</th>
+                <th>Access</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {snippetsList.map((snippet) => (
+                <tr id={`snippet-row-${snippet.id}`}>
+                  <td>
+                    <div class="max-w-xs">
+                      <div class="font-bold truncate">{snippet.title}</div>
+                      <div class="text-sm opacity-50 truncate">{snippet.description || 'No description'}</div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-sm badge-outline">{snippet.language}</span>
+                  </td>
+                  <td>
+                    <span class={`badge badge-sm ${
+                      snippet.type === 'code' ? 'badge-primary' :
+                      snippet.type === 'command' ? 'badge-secondary' :
+                      'badge-accent'
+                    }`}>
+                      {snippet.type}
+                    </span>
+                  </td>
+                  <td>
+                    <span class={`badge badge-sm ${
+                      snippet.accessLevel === 'premium' ? 'badge-secondary' :
+                      snippet.accessLevel === 'member' ? 'badge-accent' :
+                      'badge-ghost'
+                    }`}>
+                      {snippet.accessLevel}
+                    </span>
+                  </td>
+                  <td>
+                    <span class={`badge badge-sm ${snippet.isActive ? 'badge-success' : 'badge-error'}`}>
+                      {snippet.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td class="text-sm">
+                    {new Date(snippet.createdAt).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <div class="flex gap-1">
+                      <a 
+                        href={`/snippets/${snippet.id}`} 
+                        target="_blank"
+                        class="btn btn-ghost btn-xs btn-square"
+                        aria-label="View snippet"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </a>
+                      <label 
+                        for={`edit-modal-${snippet.id}`} 
+                        class="btn btn-ghost btn-xs btn-square"
+                        aria-label="Edit snippet"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </label>
+                      <label 
+                        for={`delete-modal-${snippet.id}`} 
+                        class="btn btn-ghost btn-xs btn-square text-error"
+                        aria-label="Delete snippet"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="p-8 text-center text-base-content/70">
+          <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          <p>No snippets found. {searchQuery ? 'Try adjusting your filters.' : 'Create the first one!'}</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Create Modal -->
+  <input type="checkbox" id="create-modal" class="modal-toggle" />
+  <div class="modal">
+    <div class="modal-box max-w-3xl">
+      <h3 class="font-bold text-lg mb-4">Create Snippet</h3>
+      <form method="POST" class="space-y-4">
+        <input type="hidden" name="csrf_token" value={csrfToken} />
+        <input type="hidden" name="intent" value="create" />
+        
+        <div class="grid grid-cols-2 gap-4">
+          <label class="form-control w-full col-span-2 md:col-span-1">
+            <div class="label"><span class="label-text">Title *</span></div>
+            <input 
+              type="text" 
+              name="title" 
+              class="input input-bordered w-full" 
+              placeholder="e.g., useDebounce Hook"
+              required 
+            />
+          </label>
+          
+          <label class="form-control w-full col-span-2 md:col-span-1">
+            <div class="label"><span class="label-text">Language *</span></div>
+            <input 
+              type="text" 
+              name="language" 
+              class="input input-bordered w-full" 
+              list="language-list"
+              placeholder="e.g., typescript"
+              required
+            />
+            <datalist id="language-list">
+              {commonLanguages.map((lang) => (
+                <option value={lang} />
+              ))}
+            </datalist>
+          </label>
+        </div>
+        
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text">Description</span></div>
+          <input 
+            type="text" 
+            name="description" 
+            class="input input-bordered w-full" 
+            placeholder="Brief description of this snippet"
+          />
+        </label>
+        
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text">Code/Content *</span></div>
+          <textarea 
+            name="content" 
+            class="textarea textarea-bordered w-full font-mono text-sm min-h-48"
+            placeholder="Paste your code here..."
+            required
+          ></textarea>
+        </label>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Type</span></div>
+            <select name="type" class="select select-bordered w-full">
+              <option value="code">Code</option>
+              <option value="command">Command</option>
+              <option value="config">Config</option>
+            </select>
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Category</span></div>
+            <select name="category_id" class="select select-bordered w-full">
+              <option value="">None</option>
+              {categories.map((cat) => (
+                <option value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Access Level</span></div>
+            <select name="access_level" class="select select-bordered w-full">
+              <option value="public">Public</option>
+              <option value="member">Member</option>
+              <option value="premium">Premium</option>
+            </select>
+          </label>
+          
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Status</span></div>
+            <label class="label cursor-pointer justify-start gap-4 mt-2">
+              <input 
+                type="checkbox" 
+                name="is_active" 
+                class="checkbox checkbox-primary"
+                checked
+              />
+              <span class="label-text">Active</span>
+            </label>
+          </label>
+        </div>
+        
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text">Tags (comma-separated)</span></div>
+          <input 
+            type="text" 
+            name="tags" 
+            class="input input-bordered w-full" 
+            placeholder="e.g., react, hooks, typescript"
+          />
+        </label>
+        
+        <div class="modal-action">
+          <label for="create-modal" class="btn btn-ghost">Cancel</label>
+          <button type="submit" class="btn btn-primary">Create Snippet</button>
+        </div>
+      </form>
+    </div>
+    <label class="modal-backdrop" for="create-modal">Close</label>
+  </div>
+
+  <!-- Edit and Delete Modals for each snippet -->
+  {snippetsList.map((snippet) => (
+    <>
+      <!-- Edit Modal -->
+      <input type="checkbox" id={`edit-modal-${snippet.id}`} class="modal-toggle" />
+      <div class="modal">
+        <div class="modal-box max-w-3xl">
+          <h3 class="font-bold text-lg mb-4">Edit Snippet</h3>
+          <form method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value={csrfToken} />
+            <input type="hidden" name="intent" value="update" />
+            <input type="hidden" name="id" value={snippet.id} />
+            
+            <div class="grid grid-cols-2 gap-4">
+              <label class="form-control w-full col-span-2 md:col-span-1">
+                <div class="label"><span class="label-text">Title *</span></div>
+                <input 
+                  type="text" 
+                  name="title" 
+                  class="input input-bordered w-full" 
+                  value={snippet.title}
+                  required 
+                />
+              </label>
+              
+              <label class="form-control w-full col-span-2 md:col-span-1">
+                <div class="label"><span class="label-text">Language *</span></div>
+                <input 
+                  type="text" 
+                  name="language" 
+                  class="input input-bordered w-full" 
+                  value={snippet.language}
+                  required
+                />
+              </label>
+            </div>
+            
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text">Description</span></div>
+              <input 
+                type="text" 
+                name="description" 
+                class="input input-bordered w-full" 
+                value={snippet.description || ''}
+              />
+            </label>
+            
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text">Code/Content *</span></div>
+              <textarea 
+                name="content" 
+                class="textarea textarea-bordered w-full font-mono text-sm min-h-48"
+                required
+              >{snippet.content}</textarea>
+            </label>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Type</span></div>
+                <select name="type" class="select select-bordered w-full">
+                  <option value="code" selected={snippet.type === 'code'}>Code</option>
+                  <option value="command" selected={snippet.type === 'command'}>Command</option>
+                  <option value="config" selected={snippet.type === 'config'}>Config</option>
+                </select>
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Category</span></div>
+                <select name="category_id" class="select select-bordered w-full">
+                  <option value="" selected={!snippet.categoryId}>None</option>
+                  {categories.map((cat) => (
+                    <option value={cat.id} selected={snippet.categoryId === cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Access Level</span></div>
+                <select name="access_level" class="select select-bordered w-full">
+                  <option value="public" selected={snippet.accessLevel === 'public'}>Public</option>
+                  <option value="member" selected={snippet.accessLevel === 'member'}>Member</option>
+                  <option value="premium" selected={snippet.accessLevel === 'premium'}>Premium</option>
+                </select>
+              </label>
+              
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Status</span></div>
+                <label class="label cursor-pointer justify-start gap-4 mt-2">
+                  <input 
+                    type="checkbox" 
+                    name="is_active" 
+                    class="checkbox checkbox-primary"
+                    checked={snippet.isActive}
+                  />
+                  <span class="label-text">Active</span>
+                </label>
+              </label>
+            </div>
+            
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text">Tags (comma-separated)</span></div>
+              <input 
+                type="text" 
+                name="tags" 
+                class="input input-bordered w-full" 
+                value={(snippet.tags as string[] || []).join(', ')}
+              />
+            </label>
+            
+            <div class="modal-action">
+              <label for={`edit-modal-${snippet.id}`} class="btn btn-ghost">Cancel</label>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+        <label class="modal-backdrop" for={`edit-modal-${snippet.id}`}>Close</label>
+      </div>
+
+      <!-- Delete Modal -->
+      <input type="checkbox" id={`delete-modal-${snippet.id}`} class="modal-toggle" />
+      <div class="modal">
+        <div class="modal-box">
+          <h3 class="font-bold text-lg mb-2">Delete Snippet</h3>
+          <p class="py-4">
+            Are you sure you want to delete <strong>{snippet.title}</strong>? 
+            This action cannot be undone.
+          </p>
+          <form method="POST">
+            <input type="hidden" name="csrf_token" value={csrfToken} />
+            <input type="hidden" name="intent" value="delete" />
+            <input type="hidden" name="id" value={snippet.id} />
+            
+            <div class="modal-action">
+              <label for={`delete-modal-${snippet.id}`} class="btn btn-ghost">Cancel</label>
+              <button type="submit" class="btn btn-error">Delete</button>
+            </div>
+          </form>
+        </div>
+        <label class="modal-backdrop" for={`delete-modal-${snippet.id}`}>Close</label>
+      </div>
+    </>
+  ))}
+</AdminLayout>
+
+<script>
+  // Client-side filtering
+  function applyFilters() {
+    const search = document.getElementById('search-input') as HTMLInputElement;
+    const language = document.getElementById('language-filter') as HTMLSelectElement;
+    const type = document.getElementById('type-filter') as HTMLSelectElement;
+    const access = document.getElementById('access-filter') as HTMLSelectElement;
+    
+    const params = new URLSearchParams();
+    if (search?.value) params.set('search', search.value);
+    if (language?.value) params.set('language', language.value);
+    if (type?.value) params.set('type', type.value);
+    if (access?.value) params.set('access', access.value);
+    
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    window.location.href = newUrl;
+  }
+
+  document.getElementById('search-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') applyFilters();
+  });
+  
+  document.getElementById('language-filter')?.addEventListener('change', applyFilters);
+  document.getElementById('type-filter')?.addEventListener('change', applyFilters);
+  document.getElementById('access-filter')?.addEventListener('change', applyFilters);
+</script>
