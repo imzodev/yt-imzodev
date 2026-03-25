@@ -5,7 +5,7 @@
  */
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import Alert from '../../../components/ui/Alert.astro';
-import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+
 import { 
   getAllBlogPosts, 
   getBlogPostById,
@@ -17,10 +17,7 @@ import {
   generateSlug
 } from '../../../lib/server/blog-commands';
 
-export const prerender = false;
-
-const csrfToken = getCsrfToken(Astro.cookies);
-let feedbackMessage = '';
+export const prerender = false;let feedbackMessage = '';
 let feedbackType: 'success' | 'error' | null = null;
 
 // Handle form submissions
@@ -317,7 +314,6 @@ const stats = await getBlogPostStats();
     <div class="modal-box max-w-4xl">
       <h3 class="font-bold text-lg mb-4">Create Blog Post</h3>
       <form method="POST" class="space-y-4">
-        <input type="hidden" name="csrf_token" value={csrfToken} />
         <input type="hidden" name="intent" value="create" />
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -446,7 +442,6 @@ const stats = await getBlogPostStats();
         <div class="modal-box max-w-4xl">
           <h3 class="font-bold text-lg mb-4">Edit Blog Post</h3>
           <form method="POST" class="space-y-4">
-            <input type="hidden" name="csrf_token" value={csrfToken} />
             <input type="hidden" name="intent" value="update" />
             <input type="hidden" name="id" value={post.id} />
             
@@ -576,7 +571,6 @@ const stats = await getBlogPostStats();
             This action cannot be undone.
           </p>
           <form method="POST">
-            <input type="hidden" name="csrf_token" value={csrfToken} />
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={post.id} />
             

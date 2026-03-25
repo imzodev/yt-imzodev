@@ -2,7 +2,6 @@
 import AuthLayout from '../components/layout/AuthLayout.astro';
 import Alert from '../components/ui/Alert.astro';
 import { getSupabaseServerClient } from '../lib/supabase';
-import { getCsrfToken, validateCsrfToken } from '../lib/server/csrf';
 import { getSession } from '../lib/server/auth';
 
 export const prerender = false;
@@ -17,34 +16,27 @@ let isInvalidCredentials = false;
 // Handle form submission
 if (Astro.request.method === 'POST') {
   const formData = await Astro.request.formData();
-  
-  // Validate CSRF token
-  const csrfToken = formData.get('csrf_token') as string | null;
-  if (!validateCsrfToken(Astro.cookies, csrfToken)) {
-    error = 'invalid_request';
-  } else {
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
 
-    try {
-      const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  try {
+    const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (signInError) {
-        console.error('Login error:', signInError);
-        error = 'invalid_credentials';
-        isInvalidCredentials = true;
-      } else {
-        // Redirect to dashboard on successful login
-        return Astro.redirect('/dashboard');
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      error = 'server_error';
+    if (signInError) {
+      console.error('Login error:', signInError);
+      error = 'invalid_credentials';
+      isInvalidCredentials = true;
+    } else {
+      // Redirect to dashboard on successful login
+      return Astro.redirect('/dashboard');
     }
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    error = 'server_error';
   }
 } else {
   // Check URL params for errors/messages on GET
@@ -70,8 +62,6 @@ const showSuccessMessage = Astro.url.searchParams.get('message') === 'check_emai
     <Alert type="error" message={
       error === 'invalid_credentials' || isInvalidCredentials
         ? 'Invalid email or password' 
-        : error === 'invalid_request'
-        ? 'Invalid request. Please try again.'
         : 'An error occurred during login'
     } />
   )}
@@ -82,7 +72,6 @@ const showSuccessMessage = Astro.url.searchParams.get('message') === 'check_emai
   )}
 
   <form class="mt-8 space-y-6" method="POST">
-    <input type="hidden" name="csrf_token" value={getCsrfToken(Astro.cookies)} />
     <div class="space-y-4">
       <div>
         <label for="email" class="label">Email address</label>

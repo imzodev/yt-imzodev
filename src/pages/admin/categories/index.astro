@@ -6,23 +6,18 @@
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import Alert from '../../../components/ui/Alert.astro';
 import { requireAdmin } from '../../../lib/server/auth';
-import { getCsrfToken } from '../../../lib/server/csrf';
 import { 
   getAllForumCategories, 
   createForumCategory, 
   updateForumCategory, 
   deleteForumCategory
 } from '../../../lib/server/forum';
-import { validateCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
 
 // Check admin access
 const authResult = await requireAdmin(Astro);
 if (authResult instanceof Response) return authResult;
-
-const csrfToken = getCsrfToken(Astro.cookies);
-
 // Handle form submissions
 let feedbackMessage = '';
 let feedbackType: 'success' | 'error' | null = null;
@@ -169,7 +164,6 @@ const categories = await getAllForumCategories();
                 <dialog id={`edit-${category.id}`} class="modal">
                   <div class="modal-box">
                     <form method="POST" class="modal-body">
-                      <input type="hidden" name="csrf_token" value={csrfToken} />
                       <input type="hidden" name="intent" value="update-category" />
                       <input type="hidden" name="category_id" value={category.id} />
                       
@@ -218,7 +212,6 @@ const categories = await getAllForumCategories();
                     </form>
                   </div>
                   <form method="POST" class="modal-backdrop" id={`delete-${category.id}`}>
-                    <input type="hidden" name="csrf_token" value={csrfToken} />
                     <input type="hidden" name="intent" value="delete-category" />
                     <input type="hidden" name="category_id" value={category.id} />
                   </form>
@@ -241,7 +234,6 @@ const categories = await getAllForumCategories();
   <div class="bg-base-100 shadow rounded-lg p-6 mt-8">
     <h2 class="text-xl font-semibold mb-4">Create New Category</h2>
     <form method="POST" class="space-y-4">
-      <input type="hidden" name="csrf_token" value={csrfToken} />
       <input type="hidden" name="intent" value="create-category" />
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

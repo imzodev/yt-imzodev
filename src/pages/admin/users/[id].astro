@@ -4,7 +4,6 @@
  * Shows detailed user information with management actions.
  */
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
-import { getCsrfToken } from '../../../lib/server/csrf';
 import { getUserWithSubscription, updateUserRole, setUserActiveStatus } from '../../../lib/server/admin';
 
 export const prerender = false;
@@ -24,9 +23,7 @@ if (!userData) {
   return Astro.redirect('/admin/users?error=user-not-found');
 }
 
-const { user, subscription } = userData;
-const csrfToken = getCsrfToken(Astro.cookies);
----
+const { user, subscription } = userData;---
 
 <AdminLayout 
   title={`User: ${user.name || user.email}`}

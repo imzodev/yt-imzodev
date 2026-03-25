@@ -1,5 +1,4 @@
 import type { APIRoute } from 'astro';
-import { validateCsrfToken } from '../../../lib/server/csrf';
 import { getSupabaseServerClient } from '../../../lib/supabase';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -7,11 +6,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const formData = await request.formData();
     
     // Validate CSRF token
-    const csrfToken = formData.get('csrf_token') as string | null;
-    if (!validateCsrfToken(cookies, csrfToken)) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 403 });
-    }
-
     // Get session securely
     const supabase = getSupabaseServerClient(request, cookies);
     const { data: { user } } = await supabase.auth.getUser();

@@ -6,7 +6,6 @@
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import postgres from 'postgres';
 import { getSession, isAdmin } from '../../../lib/server/auth';
-import { getCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
 
@@ -69,10 +68,7 @@ const report = reportResult[0];
 
 if (!report) {
   return Astro.redirect('/admin/moderation?error=report-not-found');
-}
-
-const csrfToken = getCsrfToken(Astro.cookies);
----
+}---
 
 <AdminLayout 
   title={`Report #${report.id}`} 

@@ -1,11 +1,7 @@
 ---
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
-import { getCsrfToken } from '../../../lib/server/csrf';
 
-export const prerender = false;
-
-const csrfToken = getCsrfToken(Astro.cookies);
----
+export const prerender = false;---
 
 <AdminLayout 
   title="Create Campaign" 
@@ -26,7 +22,6 @@ const csrfToken = getCsrfToken(Astro.cookies);
         hx-swap="innerHTML"
         class="bg-base-100 shadow rounded-lg p-6 space-y-6"
       >
-        <input type="hidden" name="csrf_token" value={csrfToken} />
 
         <!-- Subject -->
         <div>

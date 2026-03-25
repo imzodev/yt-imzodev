@@ -2,7 +2,7 @@
 import MemberLayout from '../../components/member/MemberLayout.astro';
 import Alert from '../../components/ui/Alert.astro';
 import { getSession } from '../../lib/server/auth';
-import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+
 import { isSubscribedToNewsletter, subscribeToNewsletter, unsubscribeFromNewsletter } from '../../lib/server/newsletter';
 
 export const prerender = false;
@@ -32,30 +32,22 @@ if (!message && billingState === 'return') {
 // Handle form submission
 if (Astro.request.method === 'POST') {
   const formData = await Astro.request.formData();
+  const name = formData.get('name') as string;
+  const username = formData.get('username') as string;
   
-  // Validate CSRF token
-  const csrfToken = formData.get('csrf_token') as string | null;
-  if (!validateCsrfToken(Astro.cookies, csrfToken)) {
-    message = 'Invalid request. Please try again.';
+  // Update public user profile
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ name, username })
+    .eq('supabase_user_id', user!.id);
+    
+  if (updateError) {
+    console.error('Error updating profile:', updateError);
+    message = 'Failed to update profile. Username might be taken.';
     isError = true;
   } else {
-    const name = formData.get('name') as string;
-    const username = formData.get('username') as string;
-    
-    // Update public user profile
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ name, username })
-      .eq('supabase_user_id', user!.id);
-      
-    if (updateError) {
-      console.error('Error updating profile:', updateError);
-      message = 'Failed to update profile. Username might be taken.';
-      isError = true;
-    } else {
-      message = 'Profile updated successfully!';
-      isError = false;
-    }
+    message = 'Profile updated successfully!';
+    isError = false;
   }
 }
 
@@ -89,8 +81,6 @@ let isNewsletterSubscribed = false;
 if (profile?.email) {
   isNewsletterSubscribed = await isSubscribedToNewsletter(profile.email);
 }
-
-const csrfToken = getCsrfToken(Astro.cookies);
 ---
 
 <MemberLayout 
@@ -146,7 +136,6 @@ const csrfToken = getCsrfToken(Astro.cookies);
             )}
 
             <form method="POST" class="space-y-6">
-              <input type="hidden" name="csrf_token" value={csrfToken} />
               
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="form-control w-full">
@@ -242,7 +231,6 @@ const csrfToken = getCsrfToken(Astro.cookies);
                   </div>
                 )}
                 <form method="POST" action="/api/billing/portal">
-                  <input type="hidden" name="csrf_token" value={csrfToken} />
                   <button type="submit" class="btn btn-outline btn-sm w-full mt-4">Manage Billing</button>
                 </form>
                 <a href="/profile/invoices" class="btn btn-ghost btn-sm w-full mt-2">View Invoices</a>
@@ -304,7 +292,7 @@ const csrfToken = getCsrfToken(Astro.cookies);
     </div>
   </main>
 
-  <script is:inline define:vars={{ csrfToken }}>
+  <script is:inline>
     const avatarUpload = document.getElementById('avatar-upload');
     const avatarPreview = document.getElementById('avatar-preview');
     const avatarInitial = document.getElementById('avatar-initial');
@@ -340,7 +328,6 @@ const csrfToken = getCsrfToken(Astro.cookies);
       // Upload to server
       const formData = new FormData();
       formData.append('avatar', file);
-      formData.append('csrf_token', csrfToken);
 
       try {
         const response = await fetch('/api/profile/avatar', {

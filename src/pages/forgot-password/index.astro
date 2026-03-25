@@ -2,7 +2,6 @@
 import AuthLayout from '../../components/layout/AuthLayout.astro';
 import Alert from '../../components/ui/Alert.astro';
 import { getSupabaseServerClient } from '../../lib/supabase';
-import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
 import { getSession } from '../../lib/server/auth';
 
 export const prerender = false;
@@ -17,31 +16,24 @@ let success = false;
 // Handle form submission
 if (Astro.request.method === 'POST') {
   const formData = await Astro.request.formData();
-  
-  // Validate CSRF token
-  const csrfToken = formData.get('csrf_token') as string | null;
-  if (!validateCsrfToken(Astro.cookies, csrfToken)) {
-    error = 'Invalid request. Please try again.';
-  } else {
-    const email = formData.get('email') as string;
+  const email = formData.get('email') as string;
 
-    try {
-      const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${Astro.url.origin}/api/auth/callback?next=/update-password`,
-      });
+  try {
+    const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${Astro.url.origin}/api/auth/callback?next=/update-password`,
+    });
 
-      if (resetError) {
-        console.error('Password reset error:', resetError);
-        // Don't leak whether the email exists or not for security
-        success = true;
-      } else {
-        success = true;
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      error = 'An unexpected error occurred';
+    if (resetError) {
+      console.error('Password reset error:', resetError);
+      // Don't leak whether the email exists or not for security
+      success = true;
+    } else {
+      success = true;
     }
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    error = 'An unexpected error occurred';
   }
 }
 ---
@@ -71,7 +63,6 @@ if (Astro.request.method === 'POST') {
     </Alert>
   ) : (
     <form class="mt-8 space-y-6" method="POST">
-      <input type="hidden" name="csrf_token" value={getCsrfToken(Astro.cookies)} />
       <div class="space-y-4">
         <div>
           <label for="email" class="label">Email address</label>

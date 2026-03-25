@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.astro';
 import Alert from '../../components/ui/Alert.astro';
 import { getSession } from '../../lib/server/auth';
-import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+
 import { canModerate, getModerationSnapshot, getViewerBySupabaseId } from '../../lib/server/forum';
 
 export const prerender = false;
@@ -15,10 +15,7 @@ const viewer = await getViewerBySupabaseId(user?.id);
 
 if (!canModerate(viewer)) {
   return Astro.redirect('/forum?type=error&message=Moderator%20access%20required');
-}
-
-const csrfToken = getCsrfToken(Astro.cookies);
-let feedbackMessage = Astro.url.searchParams.get('message') || '';
+}let feedbackMessage = Astro.url.searchParams.get('message') || '';
 let feedbackType = (Astro.url.searchParams.get('type') as 'success' | 'error' | null) || null;
 
 if (Astro.request.method === 'POST') {
@@ -89,14 +86,12 @@ const moderation = await getModerationSnapshot();
                   </div>
                   <div class="flex flex-col gap-2 sm:flex-row">
                     <form method="POST">
-                      <input type="hidden" name="csrf_token" value={csrfToken} />
                       <input type="hidden" name="intent" value="review-report" />
                       <input type="hidden" name="report_id" value={report.id} />
                       <input type="hidden" name="status" value="resolved" />
                       <button type="submit" class="btn btn-sm btn-success">Resolve</button>
                     </form>
                     <form method="POST">
-                      <input type="hidden" name="csrf_token" value={csrfToken} />
                       <input type="hidden" name="intent" value="review-report" />
                       <input type="hidden" name="report_id" value={report.id} />
                       <input type="hidden" name="status" value="dismissed" />
@@ -136,7 +131,6 @@ const moderation = await getModerationSnapshot();
                   <div class="mt-4 flex gap-2">
                     <a href={`/forum/thread/${post.id}`} class="btn btn-sm btn-outline">Review</a>
                     <form method="POST">
-                      <input type="hidden" name="csrf_token" value={csrfToken} />
                       <input type="hidden" name="intent" value="thread-state" />
                       <input type="hidden" name="post_id" value={post.id} />
                       <input type="hidden" name="status" value="active" />
@@ -161,7 +155,6 @@ const moderation = await getModerationSnapshot();
                       <p class="text-xs text-base-content/60">{member.role} • joined {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : 'recently'}</p>
                     </div>
                     <form method="POST">
-                      <input type="hidden" name="csrf_token" value={csrfToken} />
                       <input type="hidden" name="intent" value="user-state" />
                       <input type="hidden" name="user_id" value={member.id} />
                       <input type="hidden" name="is_active" value={member.isActive ? 'false' : 'true'} />

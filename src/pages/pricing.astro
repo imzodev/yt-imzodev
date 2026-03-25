@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import Alert from '../components/ui/Alert.astro';
 import { getSession } from '../lib/server/auth';
-import { getCsrfToken } from '../lib/server/csrf';
 
 export const prerender = false;
 
@@ -40,7 +39,6 @@ if (user) {
 const checkoutState = Astro.url.searchParams.get('checkout');
 const billingState = Astro.url.searchParams.get('billing');
 const trialState = Astro.url.searchParams.get('trial');
-const csrfToken = getCsrfToken(Astro.cookies);
 
 const feedbackMessage = checkoutState === 'success'
   ? trialState === 'true'
@@ -48,13 +46,11 @@ const feedbackMessage = checkoutState === 'success'
     : 'Your checkout was completed. Premium access will appear as soon as Stripe finishes syncing your subscription.'
   : checkoutState === 'canceled'
     ? 'Checkout was canceled. You can restart it anytime.'
-    : billingState === 'invalid-request'
-      ? 'Invalid billing request. Please try again.'
-      : billingState === 'profile-unavailable'
-        ? 'Your billing profile could not be loaded.'
-        : billingState === 'checkout-error'
-          ? 'We could not start Stripe Checkout right now.'
-          : null;
+    : billingState === 'profile-unavailable'
+      ? 'Your billing profile could not be loaded.'
+      : billingState === 'checkout-error'
+        ? 'We could not start Stripe Checkout right now.'
+        : null;
 
 const feedbackType = checkoutState === 'canceled' || billingState ? 'error' : feedbackMessage ? 'success' : null;
 ---
@@ -116,7 +112,6 @@ const feedbackType = checkoutState === 'canceled' || billingState ? 'error' : fe
             {user ? (
               subscription ? (
                 <form method="POST" action="/api/billing/portal" class="space-y-4">
-                  <input type="hidden" name="csrf_token" value={csrfToken} />
                   <div class="rounded-2xl border border-success/20 bg-success/10 p-4 text-sm text-success">
                     You already have an active billing record for {subscription.subscription_plans?.name || 'Premium'}.
                   </div>
@@ -124,7 +119,6 @@ const feedbackType = checkoutState === 'canceled' || billingState ? 'error' : fe
                 </form>
               ) : (
                 <form method="POST" action="/api/billing/checkout" class="space-y-4">
-                  <input type="hidden" name="csrf_token" value={csrfToken} />
                   
                   <!-- Trial option -->
                   <label class="flex items-start gap-3 cursor-pointer rounded-xl border border-primary/20 bg-primary/5 p-4 hover:border-primary/40 transition">

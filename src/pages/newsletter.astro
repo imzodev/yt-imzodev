@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import Alert from '../components/ui/Alert.astro';
 import { getSession } from '../lib/server/auth';
-import { getCsrfToken } from '../lib/server/csrf';
 import { getSubscriberByEmail, subscribeToNewsletter, unsubscribeFromNewsletter } from '../lib/server/newsletter';
 
 export const prerender = false;
@@ -30,33 +29,26 @@ if (subscribeState === 'success') {
 // Handle form submission
 if (Astro.request.method === 'POST' && user) {
   const formData = await Astro.request.formData();
-  const csrfToken = formData.get('csrf_token') as string | null;
+  const action = formData.get('action') as string;
   
-  if (!getCsrfToken(Astro.cookies) || formData.get('csrf_token') !== Astro.cookies.get('csrf_token')?.value) {
-    message = 'Invalid request. Please try again.';
-    isError = true;
-  } else {
-    const action = formData.get('action') as string;
+  if (action === 'subscribe') {
+    const { data: profileData } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('supabase_user_id', user.id)
+      .single();
     
-    if (action === 'subscribe') {
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('id, email')
-        .eq('supabase_user_id', user.id)
-        .single();
-      
-      if (profileData) {
-        await subscribeToNewsletter({ 
-          email: profileData.email,
-          userId: profileData.id 
-        });
-        return Astro.redirect('/newsletter?subscribe=success');
-      }
-    } else if (action === 'unsubscribe') {
-      const email = formData.get('email') as string;
-      await unsubscribeFromNewsletter(email);
-      return Astro.redirect('/newsletter?subscribe=unsubscribed');
+    if (profileData) {
+      await subscribeToNewsletter({ 
+        email: profileData.email,
+        userId: profileData.id 
+      });
+      return Astro.redirect('/newsletter?subscribe=success');
     }
+  } else if (action === 'unsubscribe') {
+    const email = formData.get('email') as string;
+    await unsubscribeFromNewsletter(email);
+    return Astro.redirect('/newsletter?subscribe=unsubscribed');
   }
 }
 
@@ -75,8 +67,6 @@ if (user) {
     isSubscribed = subscriber?.status === 'active';
   }
 }
-
-const csrfToken = getCsrfToken(Astro.cookies);
 ---
 
 <Layout title="Newsletter - YouTube Community Portal">
@@ -127,7 +117,6 @@ const csrfToken = getCsrfToken(Astro.cookies);
               </div>
 
               <form method="POST" class="space-y-4">
-                <input type="hidden" name="csrf_token" value={csrfToken} />
                 <input type="hidden" name="email" value={profile?.email} />
                 
                 {isSubscribed ? (

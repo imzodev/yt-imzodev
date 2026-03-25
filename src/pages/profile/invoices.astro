@@ -88,7 +88,6 @@ const getStatusBadge = (status: string) => {
                 )}
               </div>
               <form method="POST" action="/api/billing/portal">
-                <input type="hidden" name="csrf_token" value={Astro.cookies.get('csrf_token')?.value ?? ''} />
                 <button type="submit" class="btn btn-primary btn-sm">Manage</button>
               </form>
             </div>

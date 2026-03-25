@@ -5,13 +5,10 @@
  */
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import Alert from '../../../components/ui/Alert.astro';
-import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+
 import { getAllForumCategories, createForumCategory, updateForumCategory, deleteForumCategory } from '../../../lib/server/forum';
 
-export const prerender = false;
-
-const csrfToken = getCsrfToken(Astro.cookies);
-let feedbackMessage = '';
+export const prerender = false;let feedbackMessage = '';
 let feedbackType: 'success' | 'error' | null = null;
 
 // Handle form submissions
@@ -188,7 +185,6 @@ const categories = await getAllForumCategories();
         <h2 class="text-lg font-semibold">Create Category</h2>
       </div>
       <form method="POST" class="p-4 space-y-4">
-        <input type="hidden" name="csrf_token" value={csrfToken} />
         <input type="hidden" name="intent" value="create" />
         
         <label class="form-control w-full">
@@ -257,7 +253,6 @@ const categories = await getAllForumCategories();
         <div class="modal-box">
           <h3 class="font-bold text-lg mb-4">Edit Category</h3>
           <form method="POST" class="space-y-4">
-            <input type="hidden" name="csrf_token" value={csrfToken} />
             <input type="hidden" name="intent" value="update" />
             <input type="hidden" name="id" value={category.id} />
             
@@ -343,7 +338,6 @@ const categories = await getAllForumCategories();
             This action cannot be undone. Threads in this category will become uncategorized.
           </p>
           <form method="POST">
-            <input type="hidden" name="csrf_token" value={csrfToken} />
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={category.id} />
             

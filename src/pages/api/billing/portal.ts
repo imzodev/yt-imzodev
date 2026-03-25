@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { createBillingPortalSession, getBillingProfileBySupabaseUserId } from '../../../lib/server/billing';
-import { validateCsrfToken } from '../../../lib/server/csrf';
 import { getSupabaseServerClient } from '../../../lib/supabase';
 
 export const prerender = false;
@@ -8,11 +7,6 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, cookies, redirect, url }) => {
   try {
     const formData = await request.formData();
-    const csrfToken = formData.get('csrf_token') as string | null;
-
-    if (!validateCsrfToken(cookies, csrfToken)) {
-      return redirect('/profile?billing=invalid-request');
-    }
 
     const supabase = getSupabaseServerClient(request, cookies);
     const { data: { user } } = await supabase.auth.getUser();

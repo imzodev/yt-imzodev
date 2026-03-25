@@ -4,7 +4,7 @@ import Navbar from '../../components/Navbar.astro';
 import Alert from '../../components/ui/Alert.astro';
 import { getSession } from '../../lib/server/auth';
 import { handleForumIndexAction } from '../../lib/server/forum-actions';
-import { getCsrfToken, validateCsrfToken } from '../../lib/server/csrf';
+
 import { canModerate, getForumActivityFeed, getForumCategories, getForumThreads, getUnreadNotificationCount, getViewerBySupabaseId } from '../../lib/server/forum';
 
 export const prerender = false;
@@ -13,8 +13,6 @@ const authResult = await getSession(Astro);
 if (authResult instanceof Response) return authResult;
 const { user } = authResult;
 const viewer = await getViewerBySupabaseId(user?.id);
-const csrfToken = getCsrfToken(Astro.cookies);
-
 const currentUrl = new URL(Astro.request.url);
 const selectedCategoryId = Number(currentUrl.searchParams.get('category')) || null;
 let feedbackMessage = currentUrl.searchParams.get('message') || '';
@@ -187,7 +185,6 @@ const unreadNotifications = viewer ? await getUnreadNotificationCount(viewer.id)
 
               {viewer && categories.length > 0 ? (
                 <form method="POST" class="rounded-3xl border border-base-300 bg-base-200/60 p-5">
-                  <input type="hidden" name="csrf_token" value={csrfToken} />
                   <input type="hidden" name="intent" value="create-thread" />
                   <div class="grid gap-4 lg:grid-cols-[220px,minmax(0,1fr)]">
                     <div class="space-y-4">

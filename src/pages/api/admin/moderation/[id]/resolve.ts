@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getSession, checkAdminAccess } from '../../../../../lib/server/auth';
-import { validateCsrfToken } from '../../../../../lib/server/csrf';
 import { db, forumReports } from '../../../../../db';
 import { eq } from 'drizzle-orm';
 
@@ -31,15 +30,7 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
   try {
     const body = await request.json();
-    const { csrfToken, action } = body;
-
-    // Validate CSRF
-    if (!validateCsrfToken(cookies as any, csrfToken)) {
-      return new Response(JSON.stringify({ error: 'Invalid CSRF token' }), { 
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const { action } = body;
 
     const newStatus = action === 'dismiss' ? 'dismissed' : 'resolved';
 

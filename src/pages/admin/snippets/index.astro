@@ -5,7 +5,7 @@
  */
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import Alert from '../../../components/ui/Alert.astro';
-import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+
 import { 
   getAllSnippets, 
   getSnippetById,
@@ -16,10 +16,7 @@ import {
   getSnippetLanguages
 } from '../../../lib/server/snippet-commands';
 
-export const prerender = false;
-
-const csrfToken = getCsrfToken(Astro.cookies);
-let feedbackMessage = '';
+export const prerender = false;let feedbackMessage = '';
 let feedbackType: 'success' | 'error' | null = null;
 
 // Handle form submissions
@@ -287,7 +284,6 @@ const commonLanguages = [
     <div class="modal-box max-w-3xl">
       <h3 class="font-bold text-lg mb-4">Create Snippet</h3>
       <form method="POST" class="space-y-4">
-        <input type="hidden" name="csrf_token" value={csrfToken} />
         <input type="hidden" name="intent" value="create" />
         
         <div class="grid grid-cols-2 gap-4">
@@ -411,7 +407,6 @@ const commonLanguages = [
         <div class="modal-box max-w-3xl">
           <h3 class="font-bold text-lg mb-4">Edit Snippet</h3>
           <form method="POST" class="space-y-4">
-            <input type="hidden" name="csrf_token" value={csrfToken} />
             <input type="hidden" name="intent" value="update" />
             <input type="hidden" name="id" value={snippet.id} />
             
@@ -530,7 +525,6 @@ const commonLanguages = [
             This action cannot be undone.
           </p>
           <form method="POST">
-            <input type="hidden" name="csrf_token" value={csrfToken} />
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={snippet.id} />
             

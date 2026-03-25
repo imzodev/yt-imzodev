@@ -3,7 +3,7 @@ import Layout from '../../../layouts/Layout.astro';
 import Navbar from '../../../components/Navbar.astro';
 import Alert from '../../../components/ui/Alert.astro';
 import { getSession } from '../../../lib/server/auth';
-import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
+
 import { getForumMemberProfile, getViewerBySupabaseId } from '../../../lib/server/forum';
 
 export const prerender = false;
@@ -16,10 +16,7 @@ const username = Astro.params.username;
 
 if (!username) {
   return Astro.redirect('/forum');
-}
-
-const csrfToken = getCsrfToken(Astro.cookies);
-let feedbackMessage = Astro.url.searchParams.get('message') || '';
+}let feedbackMessage = Astro.url.searchParams.get('message') || '';
 let feedbackType = (Astro.url.searchParams.get('type') as 'success' | 'error' | null) || null;
 
 if (Astro.request.method === 'POST') {
@@ -90,7 +87,6 @@ const activityLabelMap: Record<string, string> = {
             <a href="/forum" class="btn btn-outline">Back to forum</a>
             {viewer && viewer.id !== profile.id && (
               <form method="POST">
-                <input type="hidden" name="csrf_token" value={csrfToken} />
                 <button type="submit" class={`btn ${profile.isFollowing ? 'btn-outline' : 'btn-primary'}`}>
                   {profile.isFollowing ? 'Following' : 'Follow member'}
                 </button>

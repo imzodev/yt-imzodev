@@ -1,14 +1,11 @@
 ---
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
-import { getCsrfToken } from '../../../lib/server/csrf';
 import { listUsers } from '../../../lib/server/admin';
 
 export const prerender = false;
 
 // Get users
-const users = await listUsers({ limit: 100 });
-const csrfToken = getCsrfToken(Astro.cookies);
----
+const users = await listUsers({ limit: 100 });---
 
 <AdminLayout 
   title="User Management" 

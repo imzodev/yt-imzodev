@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getSession, checkAdminAccess } from '../../../lib/server/auth';
 import { listUsers, updateUserRole, setUserActiveStatus } from '../../../lib/server/admin';
-import { validateCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
 
@@ -59,15 +58,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
 
   try {
     const body = await request.json();
-    const { userId, action, value, csrfToken } = body;
-
-    // Validate CSRF
-    if (!validateCsrfToken(cookies as any, csrfToken)) {
-      return new Response(JSON.stringify({ error: 'Invalid CSRF token' }), { 
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const { userId, action, value } = body;
 
     if (!userId) {
       return new Response(JSON.stringify({ error: 'User ID required' }), { 

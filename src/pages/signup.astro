@@ -2,7 +2,6 @@
 import AuthLayout from '../components/layout/AuthLayout.astro';
 import Alert from '../components/ui/Alert.astro';
 import { getSupabaseServerClient } from '../lib/supabase';
-import { getCsrfToken, validateCsrfToken } from '../lib/server/csrf';
 import { getSession } from '../lib/server/auth';
 
 export const prerender = false;
@@ -16,40 +15,33 @@ let error = '';
 // Handle form submission
 if (Astro.request.method === 'POST') {
   const formData = await Astro.request.formData();
-  
-  // Validate CSRF token
-  const csrfToken = formData.get('csrf_token') as string | null;
-  if (!validateCsrfToken(Astro.cookies, csrfToken)) {
-    error = 'Invalid request. Please try again.';
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const confirmPassword = formData.get('confirm-password') as string;
+
+  if (password !== confirmPassword) {
+    error = 'Passwords do not match';
   } else {
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const confirmPassword = formData.get('confirm-password') as string;
-
-    if (password !== confirmPassword) {
-      error = 'Passwords do not match';
-    } else {
-      try {
-        const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${Astro.url.origin}/api/auth/callback`,
-          }
-        });
-
-        if (signUpError) {
-          console.error('Signup error:', signUpError);
-          error = signUpError.message;
-        } else {
-          // Redirect to a verification or login page
-          return Astro.redirect('/login?message=check_email');
+    try {
+      const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${Astro.url.origin}/api/auth/callback`,
         }
-      } catch (err) {
-        console.error('Unexpected error:', err);
-        error = 'An unexpected error occurred';
+      });
+
+      if (signUpError) {
+        console.error('Signup error:', signUpError);
+        error = signUpError.message;
+      } else {
+        // Redirect to a verification or login page
+        return Astro.redirect('/login?message=check_email');
       }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      error = 'An unexpected error occurred';
     }
   }
 }
@@ -70,7 +62,6 @@ if (Astro.request.method === 'POST') {
   {error && <Alert type="error" message={error} />}
 
   <form class="mt-8 space-y-6" method="POST">
-    <input type="hidden" name="csrf_token" value={getCsrfToken(Astro.cookies)} />
     <div class="space-y-4">
       <div>
         <label for="email" class="label">Email address</label>
