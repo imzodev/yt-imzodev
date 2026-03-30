@@ -1,0 +1,148 @@
+---
+/**
+ * TagInput.astro
+ * Reusable tag input with badge display and add/remove functionality.
+ */
+export interface Props {
+  name?: string;
+  value?: string;
+  placeholder?: string;
+  id?: string;
+}
+
+const {
+  name = 'tags',
+  value = '',
+  placeholder = 'Add tags...',
+  id = 'tag-input',
+} = Astro.props;
+
+---
+
+<div class="tag-input" id={id} data-value={value}>
+  <!-- Badges container -->
+  <div class="flex flex-wrap items-center gap-2 p-2 border border-base-300 rounded-t-lg min-h-10 bg-base-200">
+    {/* Tags rendered here by JS */}
+  </div>
+  
+  <!-- Input row -->
+  <div class="flex items-center gap-2 p-2">
+    <input
+      type="text"
+      class="input input-bordered input-sm flex-1"
+      placeholder={placeholder}
+      id={`${id}-input`}
+    />
+    <button type="button" class="btn btn-sm btn-primary">
+      Add
+    </button>
+  </div>
+  
+  <!-- Hidden input for form submission -->
+  <input type="hidden" name={name} id={`${id}-hidden`} />
+</div>
+
+<script>
+  class TagInput {
+    constructor(container) {
+      this.container = container;
+      this.inputEl = container.querySelector(`#${container.id}-input`);
+      this.hiddenInput = container.querySelector(`#${container.id}-hidden`);
+      this.badgesContainer = container.querySelector('.flex.flex-wrap');
+      this.tags = new Set();
+      
+      // Parse initial tags
+      const initialValue = container.dataset.value || '';
+      if (initialValue) {
+        const parsed = initialValue.split(',').map(t => t.trim()).filter(Boolean);
+        parsed.forEach(tag => this.tags.add(tag));
+        this.updateHiddenInput();
+        this.render();
+      }
+    }
+    
+    updateHiddenInput() {
+      this.hiddenInput.value = Array.from(this.tags).join(',');
+    }
+    
+    render() {
+      this.badgesContainer.innerHTML = '';
+      this.tags.forEach(tag => {
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-primary gap-1';
+        badge.innerHTML = `
+          ${tag}
+          <button type="button" class="btn btn-ghost btn-xs btn-circle remove-tag" data-tag="${tag}" aria-label="Remove ${tag}">×</button>
+        `;
+        this.badgesContainer.appendChild(badge);
+      });
+    }
+  }
+  
+  // Initialize all tag inputs
+  document.querySelectorAll('.tag-input').forEach(el => {
+    new TagInput(el);
+  });
+  
+  // Handle input
+  document.addEventListener('keydown', (e) => {
+    if (e.target.classList.contains('tag-input') && (e.key === 'Enter' || e.key === ',')) {
+      const container = e.target.closest('.tag-input');
+      if (container) {
+        const ti = container.querySelector(`#${container.id}-input`);
+        const value = ti.value.trim();
+        if (value) {
+          const tagInput = container._tagInputInstance;
+          if (tagInput && !tagInput.tags.has(value.toLowerCase())) {
+            tagInput.tags.add(value);
+            ti.value = '';
+            tagInput.updateHiddenInput();
+            tagInput.render();
+          }
+        }
+        e.preventDefault();
+      }
+    });
+  
+  // Handle add button
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('add-tag')) {
+      const container = e.target.closest('.tag-input');
+      if (container) {
+        const ti = container.querySelector(`#${container.id}-input`);
+        const value = ti.value.trim();
+        if (value) {
+          const tagInput = container._tagInputInstance;
+          if (tagInput && !tagInput.tags.has(value.toLowerCase())) {
+            tagInput.tags.add(value);
+            ti.value = '';
+            tagInput.updateHiddenInput();
+            tagInput.render();
+          }
+        }
+      }
+    });
+  
+  // Handle remove button
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-tag')) {
+      const container = e.target.closest('.tag-input');
+      const tag = e.target.dataset.tag;
+      if (container && tag) {
+        const tagInput = container._tagInputInstance;
+        if (tagInput) {
+          tagInput.tags.delete(tag);
+          tagInput.updateHiddenInput();
+          tagInput.render();
+        }
+      }
+    });
+  });
+</script>
+
+<style>
+  .tag-input .badge {
+    display: inline-flex;
+    align-items: center;
+  }
+</style>

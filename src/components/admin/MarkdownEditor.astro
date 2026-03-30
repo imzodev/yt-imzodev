@@ -1,0 +1,266 @@
+---
+/**
+ * MarkdownEditor.astro
+ * Reusable markdown editor with preview toggle and basic toolbar.
+ */
+export interface Props {
+  name?: string;
+  value?: string;
+  placeholder?: string;
+  required?: boolean;
+  rows?: number;
+  id?: string;
+}
+
+const {
+  name = 'content',
+  value = '',
+  placeholder = 'Write your content in markdown...',
+  required = false,
+  rows = 20,
+  id = 'markdown-editor',
+} = Astro.props;
+---
+
+<div class="markdown-editor" id={id}>
+  <!-- Toolbar -->
+  <div class="flex items-center gap-1 p-2 border-b border-base-300 bg-base-200 rounded-t-lg">
+    <button type="button" class="btn btn-xs btn-ghost" data-action="bold" title="Bold (Ctrl+B)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn btn-xs btn-ghost" data-action="italic" title="Italic (Ctrl+I)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4h4m-2 0v16m4-16h-4m0 16h4"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn btn-xs btn-ghost" data-action="heading" title="Heading (Ctrl+H)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn btn-xs btn-ghost" data-action="link" title="Link (Ctrl+K)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn btn-xs btn-ghost" data-action="code" title="Code (Ctrl+`)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn btn-xs btn-ghost" data-action="list" title="Bullet List">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn btn-xs btn-ghost" data-action="quote" title="Quote">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+      </svg>
+    </button>
+    
+    <div class="divider divider-horizontal mx-1"></div>
+    
+    <!-- Preview Toggle -->
+    <div class="tabs tabs-boxed bg-base-300">
+      <button type="button" class="tab tab-sm tab-active" data-tab="write">Write</button>
+      <button type="button" class="tab tab-sm" data-tab="preview">Preview</button>
+    </div>
+  </div>
+  
+  <!-- Editor Area -->
+  <div class="editor-container relative">
+    <textarea 
+      name={name}
+      id={`${id}-textarea`}
+      class="textarea textarea-bordered w-full font-mono text-sm resize-y rounded-t-none"
+      rows={rows}
+      placeholder={placeholder}
+      required={required}
+    >{value}</textarea>
+    
+    <!-- Preview Panel (hidden by default) -->
+    <div 
+      id={`${id}-preview`}
+      class="preview-panel hidden absolute inset-0 bg-base-100 p-4 overflow-auto prose prose-sm max-w-none"
+    >
+    </div>
+  </div>
+</div>
+
+<script>
+  class MarkdownEditor {
+    container: HTMLElement;
+    textarea: HTMLTextAreaElement;
+    preview: HTMLElement;
+    writeTab: HTMLElement;
+    previewTab: HTMLElement;
+    
+    constructor(container: HTMLElement) {
+      this.container = container;
+      this.textarea = document.getElementById(`${container.id}-textarea`) as HTMLTextAreaElement;
+      this.preview = document.getElementById(`${container.id}-preview`) as HTMLElement;
+      this.writeTab = container.querySelector('[data-tab="write"]') as HTMLElement;
+      this.previewTab = container.querySelector('[data-tab="preview"]') as HTMLElement;
+      
+      this.init();
+    }
+    
+    init() {
+      // Toolbar actions
+      this.container.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = (btn as HTMLElement).dataset.action;
+          this.executeAction(action!);
+        });
+      });
+      
+      // Tab switching
+      this.writeTab?.addEventListener('click', () => this.showWrite());
+      this.previewTab?.addEventListener('click', () => this.showPreview());
+      
+      // Keyboard shortcuts
+      this.textarea?.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          switch(e.key.toLowerCase()) {
+            case 'b':
+              e.preventDefault();
+              this.executeAction('bold');
+              break;
+            case 'i':
+              e.preventDefault();
+              this.executeAction('italic');
+              break;
+            case 'h':
+              e.preventDefault();
+              this.executeAction('heading');
+              break;
+            case 'k':
+              e.preventDefault();
+              this.executeAction('link');
+              break;
+            case '`':
+              e.preventDefault();
+              this.executeAction('code');
+              break;
+          }
+        }
+      });
+    }
+    
+    executeAction(action: string) {
+      const start = this.textarea.selectionStart;
+      const end = this.textarea.selectionEnd;
+      const text = this.textarea.value;
+      const selected = text.substring(start, end);
+      
+      let insert = '';
+      let cursorOffset = 0;
+      
+      switch(action) {
+        case 'bold':
+          insert = `**${selected || 'bold text'}**`;
+          cursorOffset = selected ? 0 : -2;
+          break;
+        case 'italic':
+          insert = `*${selected || 'italic text'}*`;
+          cursorOffset = selected ? 0 : -1;
+          break;
+        case 'heading':
+          insert = `\n## ${selected || 'Heading'}\n`;
+          cursorOffset = selected ? 0 : -1;
+          break;
+        case 'link':
+          insert = `[${selected || 'link text'}](url)`;
+          cursorOffset = selected ? -1 : -5;
+          break;
+        case 'code':
+          insert = selected.includes('\n') 
+            ? `\n\`\`\`\n${selected || 'code'}\n\`\`\`\n`
+            : `\`${selected || 'code'}\``;
+          cursorOffset = selected ? 0 : -1;
+          break;
+        case 'list':
+          insert = `\n- ${selected || 'list item'}\n`;
+          cursorOffset = selected ? 0 : -1;
+          break;
+        case 'quote':
+          insert = `\n> ${selected || 'quote'}\n`;
+          cursorOffset = selected ? 0 : -1;
+          break;
+      }
+      
+      this.textarea.value = text.substring(0, start) + insert + text.substring(end);
+      this.textarea.focus();
+      this.textarea.selectionStart = this.textarea.selectionEnd = start + insert.length + cursorOffset;
+    }
+    
+    showWrite() {
+      this.textarea.classList.remove('hidden');
+      this.preview.classList.add('hidden');
+      this.writeTab.classList.add('tab-active');
+      this.previewTab.classList.remove('tab-active');
+    }
+    
+    showPreview() {
+      this.textarea.classList.add('hidden');
+      this.preview.classList.remove('hidden');
+      this.writeTab.classList.remove('tab-active');
+      this.previewTab.classList.add('tab-active');
+      this.renderPreview();
+    }
+    
+    renderPreview() {
+      const markdown = this.textarea.value;
+      this.preview.innerHTML = this.parseMarkdown(markdown);
+    }
+    
+    parseMarkdown(md: string): string {
+      let html = md
+        // Escape HTML
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        // Code blocks
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Headings
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        // Bold
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+        // Unordered lists
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        // Line breaks
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+      
+      return '<p>' + html + '</p>';
+    }
+  }
+  
+  // Initialize all markdown editors
+  document.querySelectorAll('.markdown-editor').forEach(el => {
+    new MarkdownEditor(el as HTMLElement);
+  });
+</script>
+
+<style>
+  .markdown-editor .editor-container {
+    min-height: 200px;
+  }
+  .markdown-editor .preview-panel {
+    border: 1px solid var(--fallback-bc, oklch(var(--bc) / 0.2));
+    border-top: none;
+    border-radius: 0 0 var(--rounded-btn, 0.5rem) var(--rounded-btn, 0.5rem);
+  }
+</style>

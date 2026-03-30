@@ -1,0 +1,176 @@
+---
+/**
+ * SlugInput.astro
+ * Reusable slug input with auto-generation and uniqueness validation.
+ */
+export interface Props {
+  name?: string;
+  value?: string;
+  titleSelector?: string;
+  id?: string;
+  excludeId?: number;
+}
+
+const {
+  name = 'slug',
+  value = '',
+  titleSelector = '#title',
+  id = 'slug-input',
+  excludeId,
+} = Astro.props;
+---
+
+<div class="slug-input" id={id}>
+  <div class="flex items-center gap-2">
+    <input
+      type="text"
+      name={name}
+      id={`${id}-field`}
+      class="input input-bordered flex-1"
+      value={value}
+      placeholder="url-friendly-slug"
+    />
+    <button type="button" class="btn btn-sm btn-ghost" id={`${id}-generate`}>
+      Generate
+    </button>
+  </div>
+  <div class="flex items-center gap-2 mt-1 text-sm">
+    <span class="text-base-content/50" id={`${id}-hint`}>Auto-generated from title</span>
+    <span class="hidden" id={`${id}-status`}>
+      <span class="text-success" id={`${id}-valid`}>✓ Available</span>
+      <span class="text-error" id={`${id}-taken`}>✗ Already taken</span>
+    </span>
+  </div>
+</div>
+
+<script>
+  class SlugInput {
+    constructor(container) {
+      this.container = container;
+      this.inputEl = container.querySelector(`#${container.id}-field`);
+      this.generateBtn = container.querySelector(`#${container.id}-generate`);
+      this.hintEl = container.querySelector(`#${container.id}-hint`);
+      this.statusEl = container.querySelector(`#${container.id}-status`);
+      this.validEl = container.querySelector(`#${container.id}-valid`);
+      this.takenEl = container.querySelector(`#${container.id}-taken`);
+      this.titleSelector = container.dataset.titleSelector || '#title';
+      this.excludeId = container.dataset.excludeId ? parseInt(container.dataset.excludeId, 10) : null;
+      this.debounceTimer = null;
+      
+      this.init();
+    }
+    
+    init() {
+      // Generate button click
+      this.generateBtn?.addEventListener('click', () => {
+        this.generateFromTitle();
+      });
+      
+      // Auto-generate on title blur if slug is empty
+      const titleEl = document.querySelector(this.titleSelector);
+      if (titleEl) {
+        titleEl.addEventListener('blur', () => {
+          if (!this.inputEl.value.trim()) {
+            this.generateFromTitle();
+          }
+        });
+      }
+      
+      // Input change - validate uniqueness with debounce
+      this.inputEl?.addEventListener('input', () => {
+        this.validateSlug();
+      });
+      
+      // Format slug on blur
+      this.inputEl?.addEventListener('blur', () => {
+        this.formatSlug();
+      });
+    }
+    
+    generateFromTitle() {
+      const titleEl = document.querySelector(this.titleSelector);
+      if (titleEl) {
+        const title = titleEl.value || '';
+        const slug = this.titleToSlug(title);
+        this.inputEl.value = slug;
+        this.validateSlug();
+      }
+    }
+    
+    titleToSlug(title) {
+      return title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 100);
+    }
+    
+    formatSlug() {
+      const value = this.inputEl.value;
+      const formatted = value
+        .toLowerCase()
+        .replace(/[^\w-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      this.inputEl.value = formatted;
+    }
+    
+    async validateSlug() {
+      const slug = this.inputEl.value.trim();
+      
+      if (!slug) {
+        this.hintEl.classList.remove('hidden');
+        this.statusEl.classList.add('hidden');
+        return;
+      }
+      
+      // Debounce
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = setTimeout(async () => {
+        try {
+          // Check uniqueness via API
+          const params = new URLSearchParams({ search: slug });
+          if (this.excludeId) {
+            params.set('excludeId', this.excludeId.toString());
+          }
+          
+          const response = await fetch(`/api/admin/blog/posts?${params.toString()}`);
+          const data = await response.json();
+          
+          // If no posts match, this slug is unique
+          const isUnique = !data.posts || data.posts.length === 0 || 
+            (data.posts.length === 1 && data.posts[0].slug === slug && data.posts[0].id === this.excludeId);
+          
+          this.hintEl.classList.add('hidden');
+          this.statusEl.classList.remove('hidden');
+          
+          if (isUnique) {
+            this.validEl.classList.remove('hidden');
+            this.takenEl.classList.add('hidden');
+          } else {
+            this.validEl.classList.add('hidden');
+            this.takenEl.classList.remove('hidden');
+          }
+        } catch (error) {
+          console.error('Slug validation error:', error);
+        }
+      }, 300);
+    }
+  }
+  
+  // Initialize all slug inputs
+  document.querySelectorAll('.slug-input').forEach(el => {
+    if (!el._slugInputInstance) {
+      el._slugInputInstance = new SlugInput(el);
+    }
+  });
+</script>
+
+<style>
+  .slug-input .hidden {
+    display: none;
+  }
+</style>
