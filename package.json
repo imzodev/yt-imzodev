@@ -20,11 +20,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
-    "db:push": "npx tsx supabase/migrations/run-migration.ts",
     "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "db:types": "./scripts/generate-types.sh",
-    "db:reset": "supabase db reset",
-    "db:start": "supabase db start",
     "sync:blog": "bun run scripts/sync-blog.ts",
     "sync:snippets": "bun run scripts/sync-snippets.ts",
     "sync": "bun run sync:blog && bun run sync:snippets"
