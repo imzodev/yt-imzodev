@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import Footer from "../components/Footer.astro";
 
 export interface Props {
 	title: string;
@@ -9,6 +10,7 @@ export interface Props {
 	type?: 'website' | 'article';
 	noindex?: boolean;
 	jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+	hideFooter?: boolean;
 }
 
 const {
@@ -19,6 +21,7 @@ const {
 	type = 'website',
 	noindex = false,
 	jsonLd,
+	hideFooter = false,
 } = Astro.props;
 
 const resolvedCanonical = canonical ?? Astro.url.href;
@@ -79,8 +82,9 @@ const jsonLdPayload = jsonLd ? JSON.stringify(jsonLd) : null;
 			}
 			window.localStorage.setItem('theme', theme);
 		</script>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+		</head>
+		<body class="min-h-screen flex flex-col">
+			<slot />
+			{!hideFooter && <Footer />}
+		</body>
+	</html>
