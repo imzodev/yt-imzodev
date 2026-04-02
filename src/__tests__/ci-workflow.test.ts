@@ -44,18 +44,13 @@ describe('CI Workflow', () => {
       expect(workflowContent).toContain('actions/checkout@v4');
     });
 
-    it('should setup Node.js', () => {
-      expect(workflowContent).toContain('actions/setup-node@v4');
-      expect(workflowContent).toContain("node-version: '24'");
-    });
-
-    it('should setup pnpm', () => {
-      expect(workflowContent).toContain('pnpm/action-setup@v4');
-      expect(workflowContent).toContain('version: 9');
+    it('should setup Bun', () => {
+      expect(workflowContent).toContain('oven-sh/setup-bun@v2');
+      expect(workflowContent).toContain("bun-version: '1.2.0'");
     });
 
     it('should install dependencies with frozen lockfile', () => {
-      expect(workflowContent).toContain('pnpm install --frozen-lockfile');
+      expect(workflowContent).toContain('bun install --frozen-lockfile');
     });
 
     it('should run astro check for type checking', () => {
@@ -63,7 +58,7 @@ describe('CI Workflow', () => {
     });
 
     it('should run build', () => {
-      expect(workflowContent).toContain('pnpm build');
+      expect(workflowContent).toContain('bun run build');
     });
   });
 
@@ -74,7 +69,7 @@ describe('CI Workflow', () => {
     });
 
     it('should run tests', () => {
-      expect(workflowContent).toContain('pnpm test');
+      expect(workflowContent).toContain('bun run test');
     });
 
     it('should run coverage on push events', () => {
@@ -94,17 +89,10 @@ describe('CI Workflow', () => {
       expect(workflowContent).toContain('runs-on: ubuntu-latest');
     });
 
-    it('should use latest action versions (v4)', () => {
-      // All major actions should be on v4
-      const v4Actions = [
-        'actions/checkout@v4',
-        'actions/setup-node@v4',
-        'pnpm/action-setup@v4',
-        'actions/upload-artifact@v4',
-      ];
-      v4Actions.forEach(action => {
-        expect(workflowContent).toContain(action);
-      });
+    it('should use latest action versions', () => {
+      expect(workflowContent).toContain('actions/checkout@v4');
+      expect(workflowContent).toContain('oven-sh/setup-bun@v2');
+      expect(workflowContent).toContain('actions/upload-artifact@v4');
     });
 
     it('should have proper job names', () => {
@@ -114,6 +102,56 @@ describe('CI Workflow', () => {
 
     it('should set coverage retention period', () => {
       expect(workflowContent).toContain('retention-days:');
+    });
+  });
+});
+
+describe('Package Manager Standardization', () => {
+  const gitignorePath = join(process.cwd(), '.gitignore');
+  const packageJsonPath = join(process.cwd(), 'package.json');
+  let gitignoreContent: string;
+  let packageJsonContent: string;
+
+  beforeAll(() => {
+    gitignoreContent = readFileSync(gitignorePath, 'utf-8');
+    packageJsonContent = readFileSync(packageJsonPath, 'utf-8');
+  });
+
+  describe('Lock file exclusions', () => {
+    it('should ignore package-lock.json', () => {
+      expect(gitignoreContent).toContain('package-lock.json');
+    });
+
+    it('should ignore pnpm-lock.yaml', () => {
+      expect(gitignoreContent).toContain('pnpm-lock.yaml');
+    });
+
+    it('should ignore yarn.lock', () => {
+      expect(gitignoreContent).toContain('yarn.lock');
+    });
+  });
+
+  describe('Conflicting lock files removed', () => {
+    it('should not have package-lock.json', () => {
+      expect(existsSync(join(process.cwd(), 'package-lock.json'))).toBe(false);
+    });
+
+    it('should not have pnpm-lock.yaml', () => {
+      expect(existsSync(join(process.cwd(), 'pnpm-lock.yaml'))).toBe(false);
+    });
+
+    it('should have bun.lockb', () => {
+      expect(existsSync(join(process.cwd(), 'bun.lockb'))).toBe(true);
+    });
+  });
+
+  describe('package.json configuration', () => {
+    it('should have packageManager field', () => {
+      expect(packageJsonContent).toContain('"packageManager"');
+    });
+
+    it('should specify bun as package manager', () => {
+      expect(packageJsonContent).toContain('bun@');
     });
   });
 });

@@ -26,3 +26,8 @@ pnpm-debug.log*
 
 # roo-cline setting folder
 .roo/
+
+# Enforce single package manager (bun)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

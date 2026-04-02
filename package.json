@@ -2,6 +2,7 @@
   "name": "home-irving-webdev-imzodev",
   "type": "module",
   "version": "0.0.1",
+  "packageManager": "bun@1.2.0",
   "engines": {
     "node": "24.x"
   },
