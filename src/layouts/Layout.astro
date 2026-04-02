@@ -26,7 +26,9 @@ const {
 
 const resolvedCanonical = canonical ?? Astro.url.href;
 const resolvedDescription = description ?? 'YouTube Community Portal blog, tutorials, and creator updates.';
-const resolvedImage = image ? new URL(image, Astro.url).href : undefined;
+const resolvedImage = image 
+  ? new URL(image, Astro.url).href 
+  : new URL('/images/og-default.svg', Astro.url).href;
 const jsonLdPayload = jsonLd ? JSON.stringify(jsonLd) : null;
 ---
 <!doctype html>
