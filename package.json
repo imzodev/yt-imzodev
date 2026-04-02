@@ -14,6 +14,11 @@
     "astro": "astro",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
     "db:push": "npx tsx supabase/migrations/run-migration.ts",
     "db:migrate": "drizzle-kit migrate",
@@ -51,11 +56,19 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.8",
+    "@eslint/js": "^9.24.0",
     "autoprefixer": "^10.4.27",
     "drizzle-kit": "^0.31.9",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-astro": "^1.3.1",
+    "eslint-plugin-prettier": "^5.2.6",
+    "prettier": "^3.5.3",
+    "prettier-plugin-astro": "^0.14.1",
     "supabase": "^2.76.15",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.29.1",
     "vitest": "^4.1.0"
   }
 }
