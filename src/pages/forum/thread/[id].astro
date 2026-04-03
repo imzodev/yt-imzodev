@@ -4,6 +4,7 @@ import Navbar from '../../../components/Navbar.astro';
 import Alert from '../../../components/ui/Alert.astro';
 import { getSession } from '../../../lib/server/auth';
 import { handleForumThreadAction } from '../../../lib/server/forum-actions';
+import { getCsrfToken, validateCsrfToken } from '../../../lib/server/csrf';
 
 import { canModerate, getForumThreadById, getViewerBySupabaseId } from '../../../lib/server/forum';
 
@@ -56,6 +57,7 @@ if (!thread) {
 const isOwner = viewer ? thread.authorId === viewer.id : false;
 const canManageThread = !!viewer && (isOwner || canModerate(viewer));
 const bestAnswerId = thread.replies.find((reply) => reply.isAnswer)?.id ?? null;
+const csrfToken = getCsrfToken(Astro.cookies);
 ---
 
 <Layout title={`${thread.title} - Forum - YouTube Community Portal`}>
@@ -96,17 +98,20 @@ const bestAnswerId = thread.replies.find((reply) => reply.isAnswer)?.id ?? null;
             {canManageThread && (
               <div class="flex flex-wrap gap-2">
                 <form method="POST">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
                   <input type="hidden" name="intent" value="thread-state" />
                   <input type="hidden" name="state" value="toggle-lock" />
                   <button type="submit" class="btn btn-sm btn-outline">{thread.isLocked ? 'Unlock thread' : 'Lock thread'}</button>
                 </form>
                 <form method="POST">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
                   <input type="hidden" name="intent" value="thread-state" />
                   <input type="hidden" name="state" value="toggle-pin" />
                   <button type="submit" class="btn btn-sm btn-outline btn-warning">{thread.isPinned ? 'Unpin' : 'Pin thread'}</button>
                 </form>
                 {canModerate(viewer) && thread.status === 'pending' && (
                   <form method="POST">
+                    <input type="hidden" name="csrf_token" value={csrfToken} />
                     <input type="hidden" name="intent" value="thread-state" />
                     <input type="hidden" name="state" value="approve" />
                     <button type="submit" class="btn btn-sm btn-success">Approve thread</button>
@@ -120,6 +125,7 @@ const bestAnswerId = thread.replies.find((reply) => reply.isAnswer)?.id ?? null;
 
           {!thread.isLocked && viewer ? (
             <form method="POST" class="rounded-3xl border border-base-300 bg-base-200/50 p-5">
+              <input type="hidden" name="csrf_token" value={csrfToken} />
               <input type="hidden" name="intent" value="reply" />
               <label class="form-control w-full">
                 <div class="label"><span class="label-text text-base font-medium">Add your reply</span></div>
@@ -161,6 +167,7 @@ const bestAnswerId = thread.replies.find((reply) => reply.isAnswer)?.id ?? null;
                   <div class="flex flex-wrap gap-2">
                     {canManageThread && (
                       <form method="POST">
+                        <input type="hidden" name="csrf_token" value={csrfToken} />
                         <input type="hidden" name="intent" value="best-answer" />
                         <input type="hidden" name="reply_id" value={reply.id} />
                         <button type="submit" class="btn btn-sm btn-outline btn-success">{reply.isAnswer ? 'Keep as answer' : 'Mark best answer'}</button>
@@ -176,6 +183,7 @@ const bestAnswerId = thread.replies.find((reply) => reply.isAnswer)?.id ?? null;
                     <summary class="collapse-title py-3 text-sm font-medium">Report this reply</summary>
                     <div class="collapse-content">
                       <form method="POST" class="space-y-3">
+                        <input type="hidden" name="csrf_token" value={csrfToken} />
                         <input type="hidden" name="intent" value="report" />
                         <input type="hidden" name="reply_id" value={reply.id} />
                         <label class="form-control w-full">
@@ -231,6 +239,7 @@ const bestAnswerId = thread.replies.find((reply) => reply.isAnswer)?.id ?? null;
               <div class="card-body">
                 <h2 class="card-title text-xl">Report thread</h2>
                 <form method="POST" class="space-y-3">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
                   <input type="hidden" name="intent" value="report" />
                   <label class="form-control w-full">
                     <div class="label"><span class="label-text">Reason</span></div>
