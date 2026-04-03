@@ -2,13 +2,35 @@ import type { AstroGlobal } from 'astro';
 import { getSupabaseServerClient } from '../supabase';
 import { db, users } from '../../db';
 import { eq } from 'drizzle-orm';
+import type { User, SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Session result type returned by getSession
+ */
+export type SessionResult = 
+  | { user: User | null; supabase: ReturnType<typeof getSupabaseServerClient> }
+  | Response;
+
+/**
+ * Type guard to check if getSession result is a redirect Response
+ */
+export function isRedirect(result: SessionResult): result is Response {
+  return result instanceof Response;
+}
+
+/**
+ * Type guard to check if getSession result has user data
+ */
+export function hasSession(result: SessionResult): result is { user: User | null; supabase: ReturnType<typeof getSupabaseServerClient> } {
+  return !(result instanceof Response);
+}
 
 /**
  * Validates the user session.
  * If requireAuth is true, it returns the session or redirects to login.
  * If requireGuest is true, it returns null or redirects to dashboard.
  */
-export async function getSession(Astro: AstroGlobal, options: { requireAuth?: boolean; requireGuest?: boolean } = {}) {
+export async function getSession(Astro: AstroGlobal, options: { requireAuth?: boolean; requireGuest?: boolean } = {}): Promise<SessionResult> {
   const supabase = getSupabaseServerClient(Astro.request, Astro.cookies);
   // Use getUser() instead of getSession() for secure server-side validation
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -88,7 +110,13 @@ export async function isModerator(supabaseUserId: string): Promise<boolean> {
  */
 export async function requireAdmin(Astro: AstroGlobal): Promise<{ userId: string } | Response> {
   const authResult = await getSession(Astro);
-  const user = authResult?.user;
+  
+  // Check if it's a redirect response
+  if (isRedirect(authResult)) {
+    return authResult;
+  }
+
+  const user = authResult.user;
 
   if (!user) {
     return Astro.redirect('/login?redirect=' + encodeURIComponent(Astro.url.pathname));
