@@ -6,7 +6,8 @@ import { getSession } from '../../lib/server/auth';
 export const prerender = false;
 
 const authResult = await getSession(Astro);
-const user = authResult?.user;
+if (authResult instanceof Response) return authResult;
+const { user } = authResult;
 
 const tools = [
   {

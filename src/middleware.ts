@@ -1,3 +1,17 @@
+/// <reference path="../src/env.d.ts" />
+import type { SupabaseClient, Session, User } from '@supabase/supabase-js';
+
+declare global {
+  namespace App {
+    interface Locals {
+      session: Session | null;
+      user: User | null;
+      supabase: SupabaseClient;
+      userRole: string | null;
+    }
+  }
+}
+
 import { defineMiddleware } from 'astro:middleware';
 import { createServerClient, parseCookieHeader, type CookieOptions } from '@supabase/ssr';
 import { db, users } from './db';
