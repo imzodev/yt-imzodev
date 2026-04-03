@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { syncCheckoutSession, syncStripeSubscription } from '../../../lib/server/billing';
+import { handleFailedPayment, markSubscriptionRecovered } from '../../../lib/server/dunning';
 import { webhooks } from '../../../lib/stripe';
 
 export const prerender = false;
@@ -39,6 +40,31 @@ export const POST: APIRoute = async ({ request }) => {
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         await syncStripeSubscription(event.data.object as Stripe.Subscription);
+        break;
+      }
+      case 'invoice.payment_failed': {
+        // Handle failed payment - start dunning process
+        await handleFailedPayment(event.data.object as Stripe.Invoice);
+        break;
+      }
+      case 'invoice.payment_succeeded': {
+        // Check if this is a recovery from past_due
+        const invoice = event.data.object as Stripe.Invoice;
+        if (invoice.subscription) {
+          const subscriptionId = typeof invoice.subscription === 'string' 
+            ? invoice.subscription 
+            : invoice.subscription.id;
+          await markSubscriptionRecovered(subscriptionId);
+        }
+        break;
+      }
+      case 'invoice.payment_action_required': {
+        // SCA/3D Secure required - log for admin visibility
+        const invoice = event.data.object as Stripe.Invoice;
+        console.log('[Stripe] Payment action required (SCA/3D Secure):', {
+          invoiceId: invoice.id,
+          customerId: invoice.customer,
+        });
         break;
       }
       default:
