@@ -266,11 +266,11 @@ export async function getCampaignAnalytics(campaignId: number): Promise<Campaign
   const campaign = await getCampaign(campaignId);
   if (!campaign) return null;
 
-  const totalSent = campaign.recipientCount;
-  const opens = campaign.openCount;
-  const clicks = campaign.clickCount;
-  const bounces = campaign.bounceCount;
-  const unsubscribes = campaign.unsubscribeCount;
+  const totalSent = campaign.recipientCount ?? 0;
+  const opens = campaign.openCount ?? 0;
+  const clicks = campaign.clickCount ?? 0;
+  const bounces = campaign.bounceCount ?? 0;
+  const unsubscribes = campaign.unsubscribeCount ?? 0;
 
   return {
     campaignId,

@@ -230,8 +230,8 @@ export async function getCustomerInvoices(
       paidAt: invoice.status_transitions?.paid_at 
         ? new Date(invoice.status_transitions.paid_at * 1000) 
         : null,
-      invoicePdf: invoice.invoice_pdf,
-      invoiceUrl: invoice.hosted_invoice_url,
+      invoicePdf: invoice.invoice_pdf ?? null,
+      invoiceUrl: invoice.hosted_invoice_url ?? null,
       description: invoice.description ?? invoice.lines.data[0]?.description ?? null,
     })),
     hasMore,
@@ -240,7 +240,7 @@ export async function getCustomerInvoices(
 
 export async function getCustomerUpcomingInvoice(stripeCustomerId: string) {
   try {
-    const invoice = await stripe.invoices.retrieveUpcoming({
+    const invoice = await (stripe.invoices as any).retrieveUpcoming({
       customer: stripeCustomerId,
     });
 

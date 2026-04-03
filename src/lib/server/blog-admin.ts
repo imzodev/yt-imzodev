@@ -48,6 +48,43 @@ export interface BlogPostWithRelations extends BlogPost {
   video: { id: number; title: string; youtubeId: string } | null;
 }
 
+// Helper to convert DB row to BlogPost
+function toBlogPost(row: typeof blogPosts.$inferSelect): BlogPost {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    content: row.content,
+    excerpt: row.excerpt,
+    featuredImage: row.featuredImage,
+    authorId: row.authorId,
+    categoryId: row.categoryId,
+    videoId: row.videoId,
+    accessLevel: row.accessLevel ?? 'public',
+    tags: row.tags ?? [],
+    status: row.status ?? 'draft',
+    featured: row.featured ?? false,
+    viewCount: row.viewCount ?? 0,
+    likeCount: row.likeCount ?? 0,
+    publishedAt: row.publishedAt,
+    createdAt: row.createdAt ?? new Date(),
+    updatedAt: row.updatedAt ?? new Date(),
+  };
+}
+
+// Helper to convert DB row to BlogCategory
+function toBlogCategory(row: typeof blogCategories.$inferSelect): BlogCategory {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    slug: row.slug,
+    color: row.color,
+    isActive: row.isActive ?? true,
+    createdAt: row.createdAt ?? new Date(),
+  };
+}
+
 export interface CreateBlogPostData {
   title: string;
   slug: string;
@@ -196,12 +233,15 @@ export async function listBlogPosts(options: ListBlogPostsOptions = {}): Promise
     .limit(limit)
     .offset(offset);
 
-  const posts = results.map((row) => ({
-    ...row.post,
-    category: row.category.id ? row.category : null,
-    author: row.author.id ? row.author : null,
-    video: row.video.id ? row.video : null,
-  }));
+  const posts = results.map((row) => {
+    const post = toBlogPost(row.post);
+    return {
+      ...post,
+      category: row.category?.id ? row.category : null,
+      author: row.author?.id ? row.author : null,
+      video: row.video?.id ? row.video : null,
+    };
+  });
 
   return { posts, total };
 }
@@ -238,11 +278,12 @@ export async function getBlogPostById(id: number): Promise<BlogPostWithRelations
 
   if (!result) return null;
 
+  const post = toBlogPost(result.post);
   return {
-    ...result.post,
-    category: result.category.id ? result.category : null,
-    author: result.author.id ? result.author : null,
-    video: result.video.id ? result.video : null,
+    ...post,
+    category: result.category?.id ? result.category : null,
+    author: result.author?.id ? result.author : null,
+    video: result.video?.id ? result.video : null,
   };
 }
 
@@ -272,7 +313,7 @@ export async function createBlogPost(data: CreateBlogPostData): Promise<BlogPost
     })
     .returning();
 
-  return post;
+  return toBlogPost(post);
 }
 
 /**
@@ -313,7 +354,7 @@ export async function updateBlogPost(id: number, data: Partial<Omit<CreateBlogPo
     .where(eq(blogPosts.id, id))
     .returning();
 
-  return post;
+  return toBlogPost(post);
 }
 
 /**
@@ -336,11 +377,13 @@ export async function deleteBlogPost(id: number): Promise<boolean> {
  * List all active categories for dropdowns
  */
 export async function getBlogCategories(): Promise<BlogCategory[]> {
-  return db
+  const categories = await db
     .select()
     .from(blogCategories)
     .where(eq(blogCategories.isActive, true))
     .orderBy(asc(blogCategories.name));
+
+  return categories.map(toBlogCategory);
 }
 
 /**

@@ -45,14 +45,25 @@ const {
 
 <script>
   class SlugInput {
-    constructor(container) {
+    container: HTMLElement;
+    inputEl: HTMLInputElement;
+    generateBtn: HTMLButtonElement;
+    hintEl: HTMLElement;
+    statusEl: HTMLElement;
+    validEl: HTMLElement;
+    takenEl: HTMLElement;
+    titleSelector: string;
+    excludeId: number | null;
+    debounceTimer: ReturnType<typeof setTimeout> | null;
+
+    constructor(container: HTMLElement) {
       this.container = container;
-      this.inputEl = container.querySelector(`#${container.id}-field`);
-      this.generateBtn = container.querySelector(`#${container.id}-generate`);
-      this.hintEl = container.querySelector(`#${container.id}-hint`);
-      this.statusEl = container.querySelector(`#${container.id}-status`);
-      this.validEl = container.querySelector(`#${container.id}-valid`);
-      this.takenEl = container.querySelector(`#${container.id}-taken`);
+      this.inputEl = container.querySelector(`#${container.id}-field`) as HTMLInputElement;
+      this.generateBtn = container.querySelector(`#${container.id}-generate`) as HTMLButtonElement;
+      this.hintEl = container.querySelector(`#${container.id}-hint`) as HTMLElement;
+      this.statusEl = container.querySelector(`#${container.id}-status`) as HTMLElement;
+      this.validEl = container.querySelector(`#${container.id}-valid`) as HTMLElement;
+      this.takenEl = container.querySelector(`#${container.id}-taken`) as HTMLElement;
       this.titleSelector = container.dataset.titleSelector || '#title';
       this.excludeId = container.dataset.excludeId ? parseInt(container.dataset.excludeId, 10) : null;
       this.debounceTimer = null;
@@ -67,7 +78,7 @@ const {
       });
       
       // Auto-generate on title blur if slug is empty
-      const titleEl = document.querySelector(this.titleSelector);
+      const titleEl = document.querySelector(this.titleSelector) as HTMLInputElement | null;
       if (titleEl) {
         titleEl.addEventListener('blur', () => {
           if (!this.inputEl.value.trim()) {
@@ -88,7 +99,7 @@ const {
     }
     
     generateFromTitle() {
-      const titleEl = document.querySelector(this.titleSelector);
+      const titleEl = document.querySelector(this.titleSelector) as HTMLInputElement | null;
       if (titleEl) {
         const title = titleEl.value || '';
         const slug = this.titleToSlug(title);
@@ -97,7 +108,7 @@ const {
       }
     }
     
-    titleToSlug(title) {
+    titleToSlug(title: string): string {
       return title
         .toLowerCase()
         .trim()
@@ -128,7 +139,7 @@ const {
       }
       
       // Debounce
-      clearTimeout(this.debounceTimer);
+      clearTimeout(this.debounceTimer!);
       this.debounceTimer = setTimeout(async () => {
         try {
           // Check uniqueness via API
@@ -161,10 +172,18 @@ const {
     }
   }
   
+  // Add _slugInputInstance to HTMLElement
+  declare global {
+    interface HTMLElement {
+      _slugInputInstance?: SlugInput;
+    }
+  }
+  
   // Initialize all slug inputs
-  document.querySelectorAll('.slug-input').forEach(el => {
-    if (!el._slugInputInstance) {
-      el._slugInputInstance = new SlugInput(el);
+  document.querySelectorAll('.slug-input').forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    if (!htmlEl._slugInputInstance) {
+      htmlEl._slugInputInstance = new SlugInput(htmlEl);
     }
   });
 </script>

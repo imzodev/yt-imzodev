@@ -44,18 +44,24 @@ const {
 
 <script>
   class TagInput {
-    constructor(container) {
+    container: HTMLElement;
+    inputEl: HTMLInputElement;
+    hiddenInput: HTMLInputElement;
+    badgesContainer: HTMLElement;
+    tags: Set<string>;
+
+    constructor(container: HTMLElement) {
       this.container = container;
-      this.inputEl = container.querySelector(`#${container.id}-input`);
-      this.hiddenInput = container.querySelector(`#${container.id}-hidden`);
-      this.badgesContainer = container.querySelector('.flex.flex-wrap');
+      this.inputEl = container.querySelector(`#${container.id}-input`) as HTMLInputElement;
+      this.hiddenInput = container.querySelector(`#${container.id}-hidden`) as HTMLInputElement;
+      this.badgesContainer = container.querySelector('.flex.flex-wrap') as HTMLElement;
       this.tags = new Set();
       
       // Parse initial tags
       const initialValue = container.dataset.value || '';
       if (initialValue) {
-        const parsed = initialValue.split(',').map(t => t.trim()).filter(Boolean);
-        parsed.forEach(tag => this.tags.add(tag));
+        const parsed = initialValue.split(',').map((t: string) => t.trim()).filter(Boolean);
+        parsed.forEach((tag: string) => this.tags.add(tag));
         this.updateHiddenInput();
         this.render();
       }
@@ -67,7 +73,7 @@ const {
     
     render() {
       this.badgesContainer.innerHTML = '';
-      this.tags.forEach(tag => {
+      this.tags.forEach((tag: string) => {
         const badge = document.createElement('span');
         badge.className = 'badge badge-primary gap-1';
         badge.innerHTML = `
@@ -78,18 +84,27 @@ const {
       });
     }
   }
+
+  // Add _tagInputInstance to HTMLElement
+  declare global {
+    interface HTMLElement {
+      _tagInputInstance?: TagInput;
+    }
+  }
   
   // Initialize all tag inputs
-  document.querySelectorAll('.tag-input').forEach(el => {
-    new TagInput(el);
+  document.querySelectorAll('.tag-input').forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    htmlEl._tagInputInstance = new TagInput(htmlEl);
   });
   
   // Handle input
-  document.addEventListener('keydown', (e) => {
-    if (e.target.classList.contains('tag-input') && (e.key === 'Enter' || e.key === ',')) {
-      const container = e.target.closest('.tag-input');
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('tag-input') && (e.key === 'Enter' || e.key === ',')) {
+      const container = target.closest('.tag-input') as HTMLElement | null;
       if (container) {
-        const ti = container.querySelector(`#${container.id}-input`);
+        const ti = container.querySelector(`#${container.id}-input`) as HTMLInputElement;
         const value = ti.value.trim();
         if (value) {
           const tagInput = container._tagInputInstance;
@@ -102,14 +117,16 @@ const {
         }
         e.preventDefault();
       }
-    });
+    }
+  });
   
   // Handle add button
-  document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('add-tag')) {
-      const container = e.target.closest('.tag-input');
+  document.addEventListener('click', (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('add-tag')) {
+      const container = target.closest('.tag-input') as HTMLElement | null;
       if (container) {
-        const ti = container.querySelector(`#${container.id}-input`);
+        const ti = container.querySelector(`#${container.id}-input`) as HTMLInputElement;
         const value = ti.value.trim();
         if (value) {
           const tagInput = container._tagInputInstance;
@@ -121,13 +138,15 @@ const {
           }
         }
       }
-    });
+    }
+  });
   
   // Handle remove button
-  document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('remove-tag')) {
-      const container = e.target.closest('.tag-input');
-      const tag = e.target.dataset.tag;
+  document.addEventListener('click', (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('remove-tag')) {
+      const container = target.closest('.tag-input') as HTMLElement | null;
+      const tag = target.dataset.tag;
       if (container && tag) {
         const tagInput = container._tagInputInstance;
         if (tagInput) {
@@ -136,7 +155,7 @@ const {
           tagInput.render();
         }
       }
-    });
+    }
   });
 </script>
 

@@ -49,9 +49,9 @@ export async function subscribeToNewsletter(input: SubscribeInput): Promise<News
         })
         .where(eq(newsletterSubscriptions.id, existing.id))
         .returning();
-      return updated;
+      return updated as NewsletterSubscriber;
     }
-    return existing;
+    return existing as NewsletterSubscriber;
   }
 
   const [subscriber] = await db
@@ -64,7 +64,23 @@ export async function subscribeToNewsletter(input: SubscribeInput): Promise<News
     })
     .returning();
 
-  return subscriber;
+  return subscriber as NewsletterSubscriber;
+}
+
+/**
+ * Convert a raw database row to NewsletterSubscriber
+ */
+function toSubscriber(row: typeof newsletterSubscriptions.$inferSelect | null): NewsletterSubscriber | null {
+  if (!row) return null;
+  return {
+    id: row.id,
+    email: row.email,
+    userId: row.userId,
+    status: (row.status ?? 'active') as NewsletterStatus,
+    preferences: row.preferences as Record<string, unknown> | null,
+    subscribedAt: row.subscribedAt,
+    unsubscribedAt: row.unsubscribedAt,
+  };
 }
 
 /**
@@ -99,7 +115,7 @@ export async function updateNewsletterPreferences(
     .where(eq(newsletterSubscriptions.email, input.email))
     .returning();
 
-  return updated ?? null;
+  return toSubscriber(updated);
 }
 
 /**
@@ -112,7 +128,7 @@ export async function getSubscriberByEmail(email: string): Promise<NewsletterSub
     .where(eq(newsletterSubscriptions.email, email))
     .limit(1);
 
-  return subscriber ?? null;
+  return toSubscriber(subscriber);
 }
 
 /**
@@ -126,7 +142,7 @@ export async function getActiveSubscribers(limit = 1000): Promise<NewsletterSubs
     .orderBy(desc(newsletterSubscriptions.subscribedAt))
     .limit(limit);
 
-  return subscribers;
+  return subscribers.map(toSubscriber).filter((s): s is NewsletterSubscriber => s !== null);
 }
 
 /**
