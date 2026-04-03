@@ -97,7 +97,7 @@ export interface CreateBlogPostData {
   tags?: string[];
   status?: string;
   featured?: boolean;
-  authorId: number;
+  authorId?: number | null;
 }
 
 export interface ListBlogPostsOptions {

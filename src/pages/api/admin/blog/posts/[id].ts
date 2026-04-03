@@ -6,25 +6,50 @@
  */
 import type { APIRoute } from 'astro';
 import { getBlogPostById, updateBlogPost, deleteBlogPost, generateSlug, ensureUniqueSlug } from '../../../../../lib/server/blog-admin';
-import { getSession, checkAdminAccess } from '../../../../../lib/server/auth';
+import { getSession, checkAdminAccess, isRedirect } from '../../../../../lib/server/auth';
 import { validateCsrfToken } from '../../../../../lib/server/csrf';
 
 export const prerender = false;
 
-// GET: Get single post by ID
-export const GET: APIRoute = async ({ params, cookies }) => {
-  // Auth check
+// Helper to handle auth check
+async function checkAuth(cookies: any): Promise<{ authorized: true } | { authorized: false; response: Response }> {
   const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return { 
+      authorized: false, 
+      response: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    };
+  }
+
+  if (!authResult.user) {
+    return { 
+      authorized: false, 
+      response: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    };
   }
 
   const adminCheck = await checkAdminAccess(authResult.user.id);
   if (!adminCheck.authorized) {
-    return adminCheck.error;
+    return { authorized: false, response: adminCheck.error };
+  }
+
+  return { authorized: true };
+}
+
+// GET: Get single post by ID
+export const GET: APIRoute = async ({ params, cookies }) => {
+  // Auth check
+  const auth = await checkAuth(cookies);
+  if (!auth.authorized) {
+    return auth.response;
   }
 
   try {
@@ -62,17 +87,9 @@ export const GET: APIRoute = async ({ params, cookies }) => {
 // PUT: Update existing post
 export const PUT: APIRoute = async ({ params, request, cookies }) => {
   // Auth check
-  const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const adminCheck = await checkAdminAccess(authResult.user.id);
-  if (!adminCheck.authorized) {
-    return adminCheck.error;
+  const auth = await checkAuth(cookies);
+  if (!auth.authorized) {
+    return auth.response;
   }
 
   try {
@@ -96,8 +113,9 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
 
     const formData = await request.formData();
 
-    // CSRF validation
-    if (!validateCsrfToken(cookies, formData.get('csrf_token'))) {
+    // CSRF validation - convert FormDataEntryValue | null to string | null
+    const csrfToken = formData.get('csrf_token');
+    if (!validateCsrfToken(cookies, csrfToken ? String(csrfToken) : null)) {
       return new Response(JSON.stringify({ error: 'Invalid CSRF token' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
@@ -232,17 +250,9 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
 // DELETE: Delete post
 export const DELETE: APIRoute = async ({ params, request, cookies }) => {
   // Auth check
-  const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const adminCheck = await checkAdminAccess(authResult.user.id);
-  if (!adminCheck.authorized) {
-    return adminCheck.error;
+  const auth = await checkAuth(cookies);
+  if (!auth.authorized) {
+    return auth.response;
   }
 
   try {
@@ -270,7 +280,8 @@ export const DELETE: APIRoute = async ({ params, request, cookies }) => {
     // Try to get CSRF from body first
     try {
       const formData = await request.formData();
-      csrfValid = validateCsrfToken(cookies, formData.get('csrf_token'));
+      const csrfToken = formData.get('csrf_token');
+      csrfValid = validateCsrfToken(cookies, csrfToken ? String(csrfToken) : null);
     } catch {
       // If no body, check header
       const csrfHeader = request.headers.get('X-CSRF-Token');

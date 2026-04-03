@@ -1,8 +1,41 @@
 import type { APIRoute } from 'astro';
 import { scheduleCampaign, cancelScheduledCampaign, rescheduleCampaign, getCampaign } from '../../../../../../lib/server/newsletter-campaigns';
-import { getSession, checkAdminAccess } from '../../../../../../lib/server/auth';
+import { getSession, checkAdminAccess, isRedirect } from '../../../../../../lib/server/auth';
 
 export const prerender = false;
+
+// Helper to handle auth check
+async function checkAuth(cookies: any): Promise<{ authorized: true } | { authorized: false; response: Response }> {
+  const authResult = await getSession({ cookies } as any);
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return { 
+      authorized: false, 
+      response: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    };
+  }
+
+  if (!authResult.user) {
+    return { 
+      authorized: false, 
+      response: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    };
+  }
+
+  const adminCheck = await checkAdminAccess(authResult.user.id);
+  if (!adminCheck.authorized) {
+    return { authorized: false, response: adminCheck.error };
+  }
+
+  return { authorized: true };
+}
 
 /**
  * POST /api/admin/newsletter/campaigns/[id]/schedule
@@ -10,18 +43,9 @@ export const prerender = false;
  */
 export const POST: APIRoute = async ({ request, cookies, params }) => {
   // Check authentication
-  const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Admin role check
-  const adminCheck = await checkAdminAccess(authResult.user.id);
-  if (!adminCheck.authorized) {
-    return adminCheck.error;
+  const auth = await checkAuth(cookies);
+  if (!auth.authorized) {
+    return auth.response;
   }
 
   const campaignIdStr = params.id as string;
@@ -91,18 +115,9 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
  */
 export const PUT: APIRoute = async ({ request, cookies, params }) => {
   // Check authentication
-  const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Admin role check
-  const adminCheck = await checkAdminAccess(authResult.user.id);
-  if (!adminCheck.authorized) {
-    return adminCheck.error;
+  const auth = await checkAuth(cookies);
+  if (!auth.authorized) {
+    return auth.response;
   }
 
   const campaignIdStr = params.id as string;
@@ -165,18 +180,9 @@ export const PUT: APIRoute = async ({ request, cookies, params }) => {
  */
 export const DELETE: APIRoute = async ({ cookies, params }) => {
   // Check authentication
-  const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Admin role check
-  const adminCheck = await checkAdminAccess(authResult.user.id);
-  if (!adminCheck.authorized) {
-    return adminCheck.error;
+  const auth = await checkAuth(cookies);
+  if (!auth.authorized) {
+    return auth.response;
   }
 
   const campaignIdStr = params.id as string;

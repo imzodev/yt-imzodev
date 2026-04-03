@@ -1,11 +1,20 @@
 import type { APIRoute } from 'astro';
 import { sendCampaign, getCampaign } from '../../../../lib/server/newsletter-campaigns';
-import { getSession } from '../../../../lib/server/auth';
+import { getSession, isRedirect } from '../../../../lib/server/auth';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const authResult = await getSession({ cookies } as any);
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   if (!authResult.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
       status: 401,

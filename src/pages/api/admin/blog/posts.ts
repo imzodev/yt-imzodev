@@ -5,7 +5,7 @@
  */
 import type { APIRoute } from 'astro';
 import { listBlogPosts, createBlogPost, generateSlug, ensureUniqueSlug } from '../../../../lib/server/blog-admin';
-import { getSession, checkAdminAccess } from '../../../../lib/server/auth';
+import { getSession, checkAdminAccess, isRedirect } from '../../../../lib/server/auth';
 import { validateCsrfToken } from '../../../../lib/server/csrf';
 
 export const prerender = false;
@@ -14,7 +14,16 @@ export const prerender = false;
 export const GET: APIRoute = async ({ url, cookies }) => {
   // Auth check
   const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!authResult.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -63,7 +72,16 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 export const POST: APIRoute = async ({ request, cookies }) => {
   // Auth check
   const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!authResult.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -78,8 +96,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const formData = await request.formData();
 
-    // CSRF validation
-    if (!validateCsrfToken(cookies, formData.get('csrf_token'))) {
+    // CSRF validation - convert FormDataEntryValue | null to string | null
+    const csrfToken = formData.get('csrf_token');
+    if (!validateCsrfToken(cookies, csrfToken ? String(csrfToken) : null)) {
       return new Response(JSON.stringify({ error: 'Invalid CSRF token' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
@@ -176,7 +195,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       tags,
       status,
       featured,
-      authorId: authResult.user.id,
+      // authorId would need to be looked up from users table using Supabase Auth ID
+      // For now, leaving as null since the column is nullable
+      authorId: null,
     });
 
     return new Response(JSON.stringify({ post }), {

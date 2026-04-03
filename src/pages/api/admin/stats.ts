@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getSession, requireAdmin } from '../../../lib/server/auth';
+import { getSession, requireAdmin, isRedirect } from '../../../lib/server/auth';
 import { getDashboardStats } from '../../../lib/server/admin';
 
 export const prerender = false;
@@ -7,7 +7,16 @@ export const prerender = false;
 // GET: Get all dashboard metrics
 export const GET: APIRoute = async ({ cookies }) => {
   const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!authResult.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },

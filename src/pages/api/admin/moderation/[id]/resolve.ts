@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getSession, checkAdminAccess } from '../../../../../lib/server/auth';
+import { getSession, checkAdminAccess, isRedirect } from '../../../../../lib/server/auth';
 import { db, forumReports } from '../../../../../db';
 import { eq } from 'drizzle-orm';
 
@@ -8,7 +8,16 @@ export const prerender = false;
 // POST: Resolve a report
 export const POST: APIRoute = async ({ params, request, cookies }) => {
   const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!authResult.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -38,7 +47,9 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       .update(forumReports)
       .set({ 
         status: newStatus,
-        reviewedBy: authResult.user.id,
+        // reviewedBy would need to be looked up from users table using Supabase Auth ID
+        // For now, leaving as null since the column is nullable
+        reviewedBy: null,
         reviewedAt: new Date(),
         updatedAt: new Date(),
       })

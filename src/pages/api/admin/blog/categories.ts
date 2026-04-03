@@ -4,7 +4,7 @@
  */
 import type { APIRoute } from 'astro';
 import { getBlogCategories } from '../../../../lib/server/blog-admin';
-import { getSession, checkAdminAccess } from '../../../../lib/server/auth';
+import { getSession, checkAdminAccess, isRedirect } from '../../../../lib/server/auth';
 
 export const prerender = false;
 
@@ -12,7 +12,16 @@ export const prerender = false;
 export const GET: APIRoute = async ({ cookies }) => {
   // Auth check
   const authResult = await getSession({ cookies } as any);
-  if (!authResult?.user) {
+  
+  // Check if redirect response
+  if (isRedirect(authResult)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!authResult.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
