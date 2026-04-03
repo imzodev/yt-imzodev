@@ -3,6 +3,7 @@ import MemberLayout from '../components/member/MemberLayout.astro';
 import { getSession } from '../lib/server/auth';
 import { getUserDashboardData } from '../lib/server/dashboard';
 import { getViewerBySupabaseId } from '../lib/server/forum';
+import { getPremiumUsageStats, formatUsageStats } from '../lib/server/usage-analytics';
 
 export const prerender = false;
 
@@ -14,6 +15,16 @@ const { user } = authResult;
 // Get viewer profile and dashboard data
 const viewer = await getViewerBySupabaseId(user!.id);
 const dashboardData = viewer ? await getUserDashboardData(viewer.id) : null;
+
+// Get premium usage stats for premium users
+let premiumUsage = null;
+if (viewer && viewer.subscriptionTier === 'premium') {
+  try {
+    premiumUsage = await getPremiumUsageStats(viewer.id, 30);
+  } catch (error) {
+    console.error('Error fetching premium usage:', error);
+  }
+}
 
 // Lab tools list
 const labTools = [
@@ -291,6 +302,48 @@ function formatDate(date: Date | null): string {
                 Average response time: 24 hours
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Usage Analytics - Only shown for premium subscribers */}
+      {viewer?.subscriptionTier === 'premium' && premiumUsage && (
+        <div class="card bg-base-100 shadow-lg border border-secondary/20">
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="card-title">Your Usage</h3>
+                <p class="text-sm text-base-content/70">Last 30 days of premium content</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mb-4">
+              <div class="text-center p-3 rounded-lg bg-base-200">
+                <div class="text-2xl font-bold text-primary">{premiumUsage.premiumVideosWatched}</div>
+                <div class="text-xs text-base-content/60">Videos</div>
+              </div>
+              <div class="text-center p-3 rounded-lg bg-base-200">
+                <div class="text-2xl font-bold text-secondary">{premiumUsage.premiumArticlesRead}</div>
+                <div class="text-xs text-base-content/60">Articles</div>
+              </div>
+              <div class="text-center p-3 rounded-lg bg-base-200">
+                <div class="text-2xl font-bold text-accent">{premiumUsage.premiumSnippetsAccessed}</div>
+                <div class="text-xs text-base-content/60">Snippets</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-base-content/70">Total interactions</span>
+              <span class="font-semibold">{premiumUsage.totalPremiumInteractions}</span>
+            </div>
+            {premiumUsage.totalPremiumInteractions === 0 && (
+              <p class="text-xs text-base-content/50 text-center mt-3">
+                Start exploring premium content to see your usage stats!
+              </p>
+            )}
           </div>
         </div>
       )}
