@@ -1,0 +1,60 @@
+---
+/**
+ * Short URL Redirect Handler
+ * Redirects short URLs to their original destination
+ */
+export const prerender = false;
+
+// In-memory storage for MVP (same as shorten API)
+declare global {
+  var urlStore: Map<string, { originalUrl: string; createdAt: Date; clicks: number }>;
+}
+
+// Initialize global store if not exists
+if (!globalThis.urlStore) {
+  globalThis.urlStore = new Map();
+}
+
+export async function GET({ params, redirect, url }: { 
+  params: { code: string }; 
+  redirect: (url: string, status?: number) => Response;
+  url: URL;
+}) {
+  const code = params.code;
+  
+  // Look up the short URL
+  const data = globalThis.urlStore.get(code);
+  
+  if (!data) {
+    // Return 404 page with redirect
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Link Not Found</title>
+          <style>
+            body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }
+            h1 { color: #ef4444; }
+            a { color: #3b82f6; text-decoration: none; }
+          </style>
+        </head>
+        <body>
+          <h1>🔗 Link Not Found</h1>
+          <p>This short URL doesn't exist or has expired.</p>
+          <p><a href="/">Go Home</a></p>
+        </body>
+      </html>
+    `, {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/html',
+      },
+    });
+  }
+  
+  // Increment click count
+  data.clicks++;
+  
+  // Redirect to original URL (307 = permanent redirect preserving method)
+  return redirect(data.originalUrl, 307);
+}
