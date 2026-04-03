@@ -7,6 +7,8 @@ import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import Alert from '../../../components/ui/Alert.astro';
 
 import { getAllForumCategories, createForumCategory, updateForumCategory, deleteForumCategory } from '../../../lib/server/forum';
+import { validateCsrfToken } from '../../../lib/server/csrf';
+
 
 export const prerender = false;let feedbackMessage = '';
 let feedbackType: 'success' | 'error' | null = null;

@@ -5,6 +5,7 @@ import Alert from '../../components/ui/Alert.astro';
 import { getSession } from '../../lib/server/auth';
 
 import { canModerate, getModerationSnapshot, getViewerBySupabaseId } from '../../lib/server/forum';
+import { validateCsrfToken } from '../../lib/server/csrf';
 
 export const prerender = false;
 

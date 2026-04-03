@@ -16,6 +16,7 @@ import {
   getBlogPostStats,
   generateSlug
 } from '../../../lib/server/blog-commands';
+import { validateCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;let feedbackMessage = '';
 let feedbackType: 'success' | 'error' | null = null;
