@@ -108,10 +108,15 @@ export async function createPremiumCheckoutSession(profile: BillingProfile, orig
 export async function createBillingPortalSession(profile: BillingProfile, origin: string) {
   const customerId = await ensureStripeCustomer(profile);
 
-  return await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${origin}/profile?billing=return`,
-  });
+  // Import the portal configuration function
+  const { createBillingPortalSessionWithConfig } = await import('./billing-portal-config');
+  
+  // Create a portal session with plan change capabilities
+  const session = await createBillingPortalSessionWithConfig(customerId, origin);
+  
+  return {
+    url: session.url,
+  };
 }
 
 export async function syncStripeSubscription(subscription: Stripe.Subscription) {
