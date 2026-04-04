@@ -1,6 +1,5 @@
 ---
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
-import Alert from '../../../components/ui/Alert.astro';
 import { listCampaigns, getNewsletterStats } from '../../../lib/server/newsletter-campaigns';
 
 export const prerender = false;
@@ -8,8 +7,6 @@ export const prerender = false;
 // Fetch campaign data
 const campaigns = await listCampaigns(20);
 const stats = await getNewsletterStats();
-// Recent events placeholder (in production, fetch from database)
-const recentEvents: any[] = [];
 ---
 
 <AdminLayout 

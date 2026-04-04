@@ -6,7 +6,7 @@
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import MetricCard from '../../../components/admin/MetricCard.astro';
 import postgres from 'postgres';
-import { getSession, isAdmin, hasSession, isRedirect } from '../../../lib/server/auth';
+import { getSession, isAdmin, isRedirect } from '../../../lib/server/auth';
 
 export const prerender = false;
 
@@ -57,16 +57,6 @@ const paymentStats = await pgClient`
     status,
     COUNT(*) as count
   FROM payments
-  GROUP BY status
-`;
-
-// Get recent subscription changes (last 30 days)
-const recentChanges = await pgClient`
-  SELECT 
-    status,
-    COUNT(*) as count
-  FROM subscriptions
-  WHERE updated_at > NOW() - INTERVAL '30 days'
   GROUP BY status
 `;
 

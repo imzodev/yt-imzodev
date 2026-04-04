@@ -8,13 +8,11 @@ import Alert from '../../../components/ui/Alert.astro';
 
 import { 
   getAllBlogPosts, 
-  getBlogPostById,
   createBlogPost, 
   updateBlogPost, 
   deleteBlogPost,
   getAllBlogCategories,
-  getBlogPostStats,
-  generateSlug
+  getBlogPostStats
 } from '../../../lib/server/blog-commands';
 import { validateCsrfToken } from '../../../lib/server/csrf';
 
