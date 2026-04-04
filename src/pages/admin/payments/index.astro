@@ -109,7 +109,7 @@ const tableData = failedPayments.map(({ payment, user }) => ({
                     <span class="badge badge-ghost badge-sm">{row.paymentMethod || 'Card'}</span>
                   </td>
                   <td>
-                    <span class="text-sm">{new Date(row.createdAt as string).toLocaleDateString()}</span>
+                    <span class="text-sm">{row.createdAt ? new Date(row.createdAt as string | Date).toLocaleDateString() : 'N/A'}</span>
                   </td>
                   <td>
                     <div class="dropdown dropdown-end">

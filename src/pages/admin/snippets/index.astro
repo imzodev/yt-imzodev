@@ -5,6 +5,7 @@
  */
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import Alert from '../../../components/ui/Alert.astro';
+import { validateCsrfToken } from '../../../lib/server/csrf';
 
 import { 
   getAllSnippets, 
@@ -16,7 +17,8 @@ import {
   getSnippetLanguages
 } from '../../../lib/server/snippet-commands';
 
-export const prerender = false;let feedbackMessage = '';
+export const prerender = false;
+let feedbackMessage = '';
 let feedbackType: 'success' | 'error' | null = null;
 
 // Handle form submissions
@@ -227,7 +229,7 @@ const commonLanguages = [
                     </span>
                   </td>
                   <td class="text-sm">
-                    {new Date(snippet.createdAt).toLocaleDateString()}
+                    {snippet.createdAt ? new Date(snippet.createdAt).toLocaleDateString() : 'N/A'}
                   </td>
                   <td>
                     <div class="flex gap-1">
