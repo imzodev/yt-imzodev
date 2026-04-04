@@ -94,14 +94,14 @@ const recentEvents: any[] = [];
                         {campaign.status === 'sent' && (
                           <div class="flex gap-4 mt-2 text-sm">
                             <span class="text-success">
-                              <strong>{campaign.openCount}</strong> opens
+                              <strong>{campaign.openCount ?? 0}</strong> opens
                             </span>
                             <span class="text-info">
-                              <strong>{campaign.clickCount}</strong> clicks
+                              <strong>{campaign.clickCount ?? 0}</strong> clicks
                             </span>
                             <span class="text-base-content/70">
-                              {campaign.recipientCount > 0 
-                                ? Math.round((campaign.openCount / campaign.recipientCount) * 100) 
+                              {(campaign.recipientCount ?? 0) > 0 
+                                ? Math.round(((campaign.openCount ?? 0) / (campaign.recipientCount ?? 1)) * 100) 
                                 : 0}% open rate
                             </span>
                           </div>
