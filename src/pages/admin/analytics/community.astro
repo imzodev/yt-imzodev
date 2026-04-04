@@ -156,7 +156,7 @@ const reportData = pendingReports.map(({ report, user }) => ({
                     </td>
                     <td>
                       <span class="text-sm text-base-content/70">
-                        {new Date(report.createdAt).toLocaleDateString()}
+                        {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : 'N/A'}
                       </span>
                     </td>
                     <td>
@@ -238,7 +238,7 @@ const reportData = pendingReports.map(({ report, user }) => ({
                   )}
                 </td>
                 <td class="text-sm text-base-content/70">
-                  {new Date(member.createdAt).toLocaleDateString()}
+                  {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : 'N/A'}
                 </td>
               </tr>
             ))}

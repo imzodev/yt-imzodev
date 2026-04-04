@@ -6,13 +6,19 @@
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import MetricCard from '../../../components/admin/MetricCard.astro';
 import postgres from 'postgres';
-import { getSession, isAdmin } from '../../../lib/server/auth';
+import { getSession, isAdmin, hasSession, isRedirect } from '../../../lib/server/auth';
 
 export const prerender = false;
 
 // Check if user is authenticated and admin
 const authResult = await getSession(Astro);
-const user = authResult?.user;
+
+// Handle redirect case
+if (isRedirect(authResult)) {
+  return authResult;
+}
+
+const user = authResult.user;
 
 if (!user) {
   return Astro.redirect('/login?redirect=/admin/analytics/billing');
