@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { listCampaigns, createCampaign, sendCampaign, getCampaignAnalytics, getNewsletterStats } from '../../../../lib/server/newsletter-campaigns';
+import { listCampaigns, createCampaign, getCampaignAnalytics, getNewsletterStats } from '../../../../lib/server/newsletter-campaigns';
 import { getSession, checkAdminAccess, isRedirect } from '../../../../lib/server/auth';
 
 export const prerender = false;

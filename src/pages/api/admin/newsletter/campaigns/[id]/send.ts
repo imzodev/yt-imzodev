@@ -4,7 +4,7 @@ import { getSession, checkAdminAccess, isRedirect } from '../../../../../../lib/
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, params }) => {
+export const POST: APIRoute = async ({ cookies, params }) => {
   // Check authentication
   const authResult = await getSession({ cookies } as any);
   

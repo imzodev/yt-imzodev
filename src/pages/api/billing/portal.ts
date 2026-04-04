@@ -6,7 +6,6 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies, redirect, url }) => {
   try {
-    const formData = await request.formData();
 
     const supabase = getSupabaseServerClient(request, cookies);
     const { data: { user } } = await supabase.auth.getUser();

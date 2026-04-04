@@ -1,7 +1,5 @@
 import type { APIRoute } from 'astro';
 import { unsubscribeFromNewsletter, getSubscriberByEmail } from '../../../lib/server/newsletter';
-import { db, newsletterSubscriptions } from '../../../db';
-import { eq } from 'drizzle-orm';
 
 export const prerender = false;
 

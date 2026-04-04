@@ -3,7 +3,7 @@ import { subscribeToNewsletter, getSubscriberByEmail } from '../../../lib/server
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, redirect }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
     const formData = await request.formData();
     const email = formData.get('email') as string;
