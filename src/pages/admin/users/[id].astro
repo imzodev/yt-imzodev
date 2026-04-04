@@ -23,7 +23,8 @@ if (!userData) {
   return Astro.redirect('/admin/users?error=user-not-found');
 }
 
-const { user, subscription } = userData;---
+const { user, subscription } = userData;
+---
 
 <AdminLayout 
   title={`User: ${user.name || user.email}`}
