@@ -5,7 +5,8 @@
  */
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import postgres from 'postgres';
-import { getSession, isAdmin } from '../../../lib/server/auth';
+import { getSession, isAdmin, isRedirect } from '../../../lib/server/auth';
+import { getCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
 
@@ -19,7 +20,13 @@ if (isNaN(reportId)) {
 
 // Check if user is authenticated and admin
 const authResult = await getSession(Astro);
-const user = authResult?.user;
+
+// Handle redirect case
+if (isRedirect(authResult)) {
+  return authResult;
+}
+
+const user = authResult.user;
 
 if (!user) {
   return Astro.redirect('/login?redirect=/admin/moderation/' + reportId);
@@ -30,6 +37,8 @@ const userIsAdmin = await isAdmin(user.id);
 if (!userIsAdmin) {
   return Astro.redirect('/dashboard?error=unauthorized');
 }
+
+const csrfToken = getCsrfToken(Astro.cookies);
 
 // Get database connection string for raw queries
 const connectionString = import.meta.env.DATABASE_URL ?? process.env.DATABASE_URL;
@@ -214,7 +223,8 @@ if (!report) {
 
 <script>
   document.body.addEventListener('htmx:afterRequest', (e) => {
-    if (e.detail?.xhr?.status === 200) {
+    const event = e as CustomEvent;
+    if (event.detail?.xhr?.status === 200) {
       window.location.href = '/admin/moderation';
     }
   });
