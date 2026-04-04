@@ -1,11 +1,14 @@
 ---
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import { listUsers } from '../../../lib/server/admin';
+import { getCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
 
 // Get users
-const users = await listUsers({ limit: 100 });---
+const users = await listUsers({ limit: 100 });
+const csrfToken = getCsrfToken(Astro.cookies);
+---
 
 <AdminLayout 
   title="User Management" 
@@ -90,7 +93,7 @@ const users = await listUsers({ limit: 100 });---
                       {u.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td class="text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td class="text-sm">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td>
                   <td>
                     <div class="dropdown dropdown-end">
                       <label tabindex="0" class="btn btn-ghost btn-xs">
@@ -153,9 +156,9 @@ const users = await listUsers({ limit: 100 });---
 <script>
   // Client-side filtering
   document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('search-input');
-    const tierFilter = document.getElementById('tier-filter');
-    const statusFilter = document.getElementById('status-filter');
+    const searchInput = document.getElementById('search-input') as HTMLInputElement | null;
+    const tierFilter = document.getElementById('tier-filter') as HTMLSelectElement | null;
+    const statusFilter = document.getElementById('status-filter') as HTMLSelectElement | null;
     const tableBody = document.getElementById('users-table-body');
     
     function filterUsers() {

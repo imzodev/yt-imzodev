@@ -6,7 +6,7 @@
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
 import MetricCard from '../../../components/admin/MetricCard.astro';
 import { db, videos, blogPosts, snippets } from '../../../db';
-import { count, desc } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 
 export const prerender = false;
 
@@ -15,7 +15,9 @@ export const prerender = false;
 // Get content metrics
 const [
   videoStats,
+  premiumVideoStats,
   blogStats,
+  _unusedBlogStats,
   snippetStats,
   recentVideos,
   recentBlogs,
@@ -23,7 +25,7 @@ const [
 ] = await Promise.all([
   // Video stats
   db.select({ count: count() }).from(videos),
-  db.select({ count: count() }).from(videos).where(/* isPremium filter would go here */),
+  db.select({ count: count() }).from(videos).where(eq(videos.isPremium, true)),
   
   // Blog stats  
   db.select({ count: count() }).from(blogPosts),
@@ -40,6 +42,7 @@ const [
 
 // Extract counts
 const totalVideos = videoStats[0]?.count || 0;
+const premiumVideos = premiumVideoStats[0]?.count || 0;
 const totalBlogPosts = blogStats[0]?.count || 0;
 const totalSnippets = snippetStats[0]?.count || 0;
 
@@ -65,7 +68,7 @@ const totalSnippetCopies = Math.floor(Math.random() * 1000) + 200; // Placeholde
       />
       <MetricCard 
         label="Premium Videos" 
-        value={Math.floor(totalVideos * 0.3)}
+        value={premiumVideos}
         icon="number"
         variant="warning"
       />
@@ -121,7 +124,7 @@ const totalSnippetCopies = Math.floor(Math.random() * 1000) + 200; // Placeholde
                     )}
                   </td>
                   <td class="text-sm text-base-content/70">
-                    {new Date(video.createdAt).toLocaleDateString()}
+                    {video.createdAt ? new Date(video.createdAt).toLocaleDateString() : 'N/A'}
                   </td>
                 </tr>
               ))}
@@ -182,14 +185,14 @@ const totalSnippetCopies = Math.floor(Math.random() * 1000) + 200; // Placeholde
                   <td class="font-medium">{post.title}</td>
                   <td class="text-sm text-base-content/70">{post.slug}</td>
                   <td>
-                    {post.isPremium ? (
+                    {post.accessLevel === 'premium' ? (
                       <span class="badge badge-warning badge-sm">Premium</span>
                     ) : (
                       <span class="text-base-content/50">Free</span>
                     )}
                   </td>
                   <td class="text-sm text-base-content/70">
-                    {new Date(post.createdAt).toLocaleDateString()}
+                    {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'N/A'}
                   </td>
                 </tr>
               ))}
@@ -252,14 +255,14 @@ const totalSnippetCopies = Math.floor(Math.random() * 1000) + 200; // Placeholde
                     <span class="badge badge-ghost badge-sm">{snippet.language || 'text'}</span>
                   </td>
                   <td>
-                    {snippet.isPremium ? (
+                    {snippet.accessLevel === 'premium' ? (
                       <span class="badge badge-warning badge-sm">Premium</span>
                     ) : (
                       <span class="text-base-content/50">Free</span>
                     )}
                   </td>
                   <td class="text-sm text-base-content/70">
-                    {new Date(snippet.createdAt).toLocaleDateString()}
+                    {snippet.createdAt ? new Date(snippet.createdAt).toLocaleDateString() : 'N/A'}
                   </td>
                 </tr>
               ))}
