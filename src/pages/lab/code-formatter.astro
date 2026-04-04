@@ -7,7 +7,7 @@ export const prerender = false;
 
 const authResult = await getSession(Astro);
 if (authResult instanceof Response) return authResult;
-const { user } = authResult;
+const { user: _user } = authResult;
 
 const languages = [
   { value: 'javascript', label: 'JavaScript' },
@@ -221,7 +221,7 @@ const languages = [
       return formatted.trim();
     }
 
-    function minifyCode(code: string, language: string): string {
+    function minifyCode(code: string, _language: string): string {
       // Basic minification
       return code
         .replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments

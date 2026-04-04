@@ -203,7 +203,7 @@ import Navbar from '../../components/Navbar.astro';
       }).join('');
 
       // Render color details
-      colorList.innerHTML = currentPalette.map((color, index) => {
+      colorList.innerHTML = currentPalette.map((color) => {
         const rgb = hexToRgb(color);
         const hsl = rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : null;
         

@@ -26,7 +26,7 @@ if (error || !snippet) {
 
 // Check content access based on snippet access level
 const contentAccess = await checkContentAccess(Astro, (snippet.access_level as 'public' | 'member' | 'premium') || 'public');
-const { hasAccess, isAuthenticated, isPremium, userTier } = contentAccess;
+const { hasAccess, isAuthenticated, isPremium } = contentAccess;
 
 // Generate highlighted code (only if has access)
 let highlightedCode = '';

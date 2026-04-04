@@ -27,7 +27,7 @@ if (error || !post || post.status !== 'published') {
 
 // Check content access based on post access level
 const contentAccess = await checkContentAccess(Astro, (post.access_level as 'public' | 'member' | 'premium') || 'public');
-const { hasAccess, isAuthenticated, isPremium, userTier } = contentAccess;
+const { hasAccess, isAuthenticated, isPremium } = contentAccess;
 
 // Try to get local MDX entry
 const entry = await getEntry('blog', slug as string);

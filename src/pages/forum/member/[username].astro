@@ -31,9 +31,9 @@ if (Astro.request.method === 'POST') {
   }
 
   try {
-    const forumActions = await import('../../../lib/server/forum-actions');
+    const { handleForumMemberAction } = await import('../../../lib/server/forum-actions');
 
-    return Astro.redirect(await forumActions.handleForumMemberAction({
+    return Astro.redirect(await handleForumMemberAction({
       formData,
       username,
       viewer,

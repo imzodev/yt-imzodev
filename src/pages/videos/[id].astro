@@ -26,7 +26,7 @@ const contentAccess = video.is_premium
   ? await checkContentAccess(Astro, 'premium')
   : await checkContentAccess(Astro, 'public');
 
-const { hasAccess, isAuthenticated, isPremium, userTier } = contentAccess;
+const { hasAccess, isAuthenticated, isPremium } = contentAccess;
 
 // Format duration
 const formatDuration = (seconds: number) => {
