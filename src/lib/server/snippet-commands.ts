@@ -2,8 +2,8 @@
  * Snippet CRUD Operations
  * Server functions for managing code snippets in the admin dashboard.
  */
-import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
-import { db, snippets, snippetCategories, users, videos } from '../../db';
+import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { db, snippets, snippetCategories, users } from '../../db';
 
 /**
  * Get all snippets with optional filtering

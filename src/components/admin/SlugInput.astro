@@ -14,9 +14,9 @@ export interface Props {
 const {
   name = 'slug',
   value = '',
-  titleSelector = '#title',
+  titleSelector: _titleSelector = '#title',
   id = 'slug-input',
-  excludeId,
+  excludeId: _excludeId,
 } = Astro.props;
 ---
 

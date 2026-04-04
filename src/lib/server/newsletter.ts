@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { db, newsletterSubscriptions } from '../../db';
 
 export type NewsletterStatus = 'active' | 'unsubscribed' | 'bounced';

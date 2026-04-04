@@ -1,5 +1,3 @@
-import type { NewsletterSubscriber } from './newsletter';
-
 /**
  * Base styles for email templates
  */
