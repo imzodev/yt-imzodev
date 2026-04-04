@@ -4,7 +4,8 @@
  * Shows detailed user information with management actions.
  */
 import AdminLayout from '../../../components/admin/AdminLayout.astro';
-import { getUserWithSubscription, updateUserRole, setUserActiveStatus } from '../../../lib/server/admin';
+import { getUserWithSubscription } from '../../../lib/server/admin';
+import { getCsrfToken } from '../../../lib/server/csrf';
 
 export const prerender = false;
 
@@ -24,6 +25,7 @@ if (!userData) {
 }
 
 const { user, subscription } = userData;
+const csrfToken = getCsrfToken(Astro.cookies);
 ---
 
 <AdminLayout 
@@ -90,11 +92,11 @@ const { user, subscription } = userData;
               </div>
               <div>
                 <dt class="text-sm text-base-content/70">Joined</dt>
-                <dd class="font-medium">{new Date(user.createdAt).toLocaleDateString()}</dd>
+                <dd class="font-medium">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</dd>
               </div>
               <div>
                 <dt class="text-sm text-base-content/70">Last Updated</dt>
-                <dd class="font-medium">{new Date(user.updatedAt).toLocaleDateString()}</dd>
+                <dd class="font-medium">{user.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'N/A'}</dd>
               </div>
             </dl>
           </div>
@@ -181,7 +183,7 @@ const { user, subscription } = userData;
                   hx-confirm="Change role to member?"
                   hx-target="body"
                   hx-swap="none"
-                  {user.role === 'member' && 'disabled'}
+                  disabled={user.role === 'member'}
                 >
                   Member
                 </button>
@@ -191,7 +193,7 @@ const { user, subscription } = userData;
                   hx-headers='{"Content-Type": "application/json"}'
                   hx-vals={`{"userId": ${user.id}, "action": "updateRole", "value": "moderator", "csrfToken": "${csrfToken}"}`}
                   hx-confirm="Change role to moderator?"
-                  {user.role === 'moderator' && 'disabled'}
+                  disabled={user.role === 'moderator'}
                 >
                   Moderator
                 </button>
@@ -201,7 +203,7 @@ const { user, subscription } = userData;
                   hx-headers='{"Content-Type": "application/json"}'
                   hx-vals={`{"userId": ${user.id}, "action": "updateRole", "value": "admin", "csrfToken": "${csrfToken}"}`}
                   hx-confirm="Make this user an admin?"
-                  {user.role === 'admin' && 'disabled'}
+                  disabled={user.role === 'admin'}
                 >
                   Admin
                 </button>
@@ -264,8 +266,9 @@ const { user, subscription } = userData;
 
 <script>
   // Handle HTMX responses
-  document.body.addEventListener('htmx:afterRequest', (e: CustomEvent) => {
-    if (e.detail?.xhr?.status === 200) {
+  document.body.addEventListener('htmx:afterRequest', (e) => {
+    const event = e as CustomEvent;
+    if (event.detail?.xhr?.status === 200) {
       // Reload page on success
       window.location.reload();
     }
