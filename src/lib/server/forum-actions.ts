@@ -7,7 +7,6 @@ import {
   getForumCategories,
   getForumMemberProfile,
   getForumThreadById,
-  getNotificationPreferences,
   markBestAnswer,
   markNotificationsAsRead,
   reviewReport,

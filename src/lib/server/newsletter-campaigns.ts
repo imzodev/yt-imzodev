@@ -1,6 +1,6 @@
 import { eq, desc, sql } from 'drizzle-orm';
 import { db, newsletterSubscriptions, newsletterCampaigns, newsletterAnalytics } from '../../db';
-import type { NewsletterCampaign, NewNewsletterCampaign, NewsletterAnalytics, NewNewsletterAnalytics } from '../../db';
+import type { NewsletterCampaign, NewsletterAnalytics } from '../../db';
 
 export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
 

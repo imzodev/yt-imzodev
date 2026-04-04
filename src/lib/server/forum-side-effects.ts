@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db, forumNotifications, notificationPreferences, userActivity } from '../../db';
 import type { NotificationPreference } from '../../db/schema';
 

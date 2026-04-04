@@ -38,8 +38,6 @@ export interface DashboardStats {
 export async function getRevenueMetrics(): Promise<RevenueMetrics> {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
   // Get active subscriptions
   const activeSubs = await db
@@ -228,9 +226,7 @@ export async function listUsers(options: {
   status?: string;
   search?: string;
 }) {
-  const { limit = 50, offset = 0, tier, status, search } = options;
-
-  let query = db.select().from(users);
+  const { limit = 50, offset = 0, tier, status, search: _search } = options;
 
   // Apply filters (simplified - in production use proper query builder)
   const conditions = [];
